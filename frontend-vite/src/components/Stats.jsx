@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
+import { ShieldCheck, Clock3, Star, Users } from "lucide-react";
 
 function AnimatedCounter({ target }) {
   const [count, setCount] = useState(0);
@@ -33,24 +35,37 @@ function AnimatedCounter({ target }) {
 
 export default function Stats() {
   const stats = [
-    { value: "50K+", label: "Happy Customers", target: "50" },
-    { value: "1200+", label: "Expert Pros", target: "1200" },
-    { value: "4.9★", label: "Average Rating", target: "4.9" },
-    { value: "30 Min", label: "Avg Response Time", target: "30" },
+    { value: "50K+", label: "Happy Customers", target: "50", Icon: Users },
+    { value: "1200+", label: "Verified Experts", target: "1200", Icon: ShieldCheck },
+    { value: "4.9★", label: "Average Rating", target: "4.9", Icon: Star },
+    { value: "30 Min", label: "Avg Response Time", target: "30", Icon: Clock3 },
   ];
 
   return (
-    <section className="px-4 sm:px-[5vw] pb-16 sm:pb-20">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 rounded-[20px] overflow-hidden border border-white/7">
-        {stats.map((s, i) => (
-          <div key={i} className="bg-white/[0.03] p-6 sm:p-9 text-center" style={{ borderRight: i < 3 ? "1px solid rgba(255,255,255,0.07)" : "none" }}>
-            <div className="text-[clamp(24px,5vw,40px)] font-extrabold text-white mb-1.5 sm:mb-2">
-              <AnimatedCounter target={s.target} />
-              {s.value.includes("+") ? "+" : s.value.includes("★") ? "★" : " Min"}
-            </div>
-            <div className="text-xs sm:text-sm text-white/40">{s.label}</div>
-          </div>
-        ))}
+    <section className="px-4 pb-16 sm:px-[5vw] sm:pb-20">
+      <div className="grid grid-cols-2 gap-3 rounded-3xl border border-white/10 bg-white/[0.02] p-3 backdrop-blur-xl lg:grid-cols-4">
+        {stats.map((s, i) => {
+          const SIcon = s.Icon;
+          return (
+            <motion.div
+              key={s.label}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.4 }}
+              transition={{ duration: 0.45, delay: i * 0.1 }}
+              className="rounded-2xl border border-white/10 bg-[#0a1230]/70 p-5 text-center sm:p-7"
+            >
+              <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-300">
+                <SIcon size={18} />
+              </div>
+              <div className="text-[clamp(24px,5vw,38px)] font-extrabold text-white">
+                <AnimatedCounter target={s.target} />
+                {s.value.includes("+") ? "+" : s.value.includes("★") ? "★" : " Min"}
+              </div>
+              <div className="mt-1 text-xs text-white/50 sm:text-sm">{s.label}</div>
+            </motion.div>
+          );
+        })}
       </div>
     </section>
   );

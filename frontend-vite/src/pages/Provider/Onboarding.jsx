@@ -20,6 +20,7 @@ const Onboarding = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [gateLoading, setGateLoading] = useState(true);
 
   const [userName, setUserName] = useState('');
 
@@ -37,10 +38,61 @@ const Onboarding = () => {
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
-      const user = JSON.parse(storedUser);
-      setUserName(user.name);
+      try {
+        const user = JSON.parse(storedUser);
+        setUserName(user.name);
+      } catch {
+        /* ignore */
+      }
     }
   }, []);
+
+  // Providers who already have a profile should use the dashboard, not this form
+  useEffect(() => {
+    if (isSubmitted) {
+      setGateLoading(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = localStorage.getItem('token');
+        let user = null;
+        try {
+          user = JSON.parse(localStorage.getItem('user') || 'null');
+        } catch {
+          user = null;
+        }
+        if (!token || !user) {
+          navigate('/login', { replace: true });
+          return;
+        }
+        if (String(user.role || '').toLowerCase().trim() !== 'provider') {
+          navigate('/login', { replace: true });
+          return;
+        }
+        const res = await fetch(`${API_BASE_URL}/api/provider/profile`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.status === 401) {
+          navigate('/login', { replace: true });
+          return;
+        }
+        const data = await res.json();
+        if (cancelled) return;
+        if (res.ok && data.success && data.profile) {
+          navigate('/provider', { replace: true });
+          return;
+        }
+      } catch {
+        /* allow onboarding if check fails */
+      }
+      if (!cancelled) setGateLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate, isSubmitted]);
 
   const handleChange = (e) => {
     const { name, value, files } = e.target;
@@ -96,6 +148,12 @@ const Onboarding = () => {
 
       if (result.success) {
         setIsSubmitted(true);
+        try {
+          const u = JSON.parse(localStorage.getItem('user') || '{}');
+          localStorage.setItem('user', JSON.stringify({ ...u, needsOnboarding: false }));
+        } catch {
+          /* ignore */
+        }
         toast.success("Application Submitted! 🚀");
       } else {
         // Agar token invalid hai toh backend se message aayega
@@ -108,6 +166,17 @@ const Onboarding = () => {
     }
   };
 
+  if (gateLoading && !isSubmitted) {
+    return (
+      <div className="min-h-screen bg-[#020818] flex items-center justify-center p-6">
+        <div className="flex flex-col items-center gap-4 text-white/60">
+          <div className="h-10 w-10 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+          <p className="text-sm font-medium">Checking your account…</p>
+        </div>
+      </div>
+    );
+  }
+
   if (isSubmitted) {
     return (
       <div className="min-h-screen bg-[#020818] flex items-center justify-center p-6 text-center">
@@ -116,7 +185,7 @@ const Onboarding = () => {
             <CheckCircle2 size={48} className="animate-pulse" />
           </div>
           <h2 className="text-3xl font-bold text-white mb-4">Under Review</h2>
-          <p className="text-white/60 mb-8">Hamari team verify kar rahi hai. Approval ke baad dashboard unlock ho jayega.</p>
+          <p className="text-white/60 mb-8">Our team is verifying your account. The dashboard will be unlocked after approval.</p>
         </div>
       </div>
     );

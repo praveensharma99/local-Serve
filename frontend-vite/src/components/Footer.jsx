@@ -17,49 +17,73 @@ export default function Footer() {
   ];
 
   return (
-    <footer className="border-t border-white/6 px-4 sm:px-[5vw] py-12 sm:py-16 pb-10 sm:pb-12" style={{ background: "#020818" }}>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-12 mb-12">
+    <footer className="bg-[#020818] border-t border-white/10 px-6 py-12 lg:px-[5vw] lg:py-16">
+      {/* Main Grid Section */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12 mb-12">
         
-        {/* Brand Section */}
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🔧</div>
-            <span style={{ fontSize: 20, fontWeight: 700, color: "#fff" }}>Local<span style={{ color: "#818cf8" }}>Serve</span></span>
+        {/* Brand Section - Mobile par full width le lega */}
+        <div className="col-span-2 lg:col-span-1 flex flex-col items-center lg:items-start text-center lg:text-left">
+          <div className="flex items-center gap-3 mb-5">
+            <img
+              src="/images/logo3.png"
+              alt="LocalServe logo"
+              className="w-20 h-20 object-contain drop-shadow-[0_0_14px_rgba(99,102,241,0.35)]"
+            />
+            <span className="text-2xl font-extrabold text-white tracking-tight">
+              Local<span className="text-indigo-400">Serve</span>
+            </span>
           </div>
           <p className="text-sm text-white/40 leading-relaxed max-w-[280px]">
             India's most trusted home services platform. Bringing quality and reliability to your doorstep.
           </p>
-          <div className="flex gap-3 mt-5">
+          
+          {/* Social Icons */}
+          <div className="flex gap-3 mt-6">
             {["𝕏", "in", "fb", "▶"].map(s => (
-              <div key={s} style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, cursor: "pointer", color: "#fff" }}>{s}</div>
+              <div 
+                key={s} 
+                className="w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-sm cursor-pointer text-white hover:bg-indigo-600 hover:border-indigo-600 transition-all duration-300"
+              >
+                {s}
+              </div>
             ))}
           </div>
         </div>
 
-        {/* Links Sections */}
+        {/* Links Sections - Mobile par 2-column grid mein aayenge */}
         {footerData.map(col => (
-          <div key={col.title}>
-            <h4 className="text-xs sm:text-[13px] font-bold text-white/50 tracking-wider uppercase mb-4 sm:mb-[18px]">{col.title}</h4>
-            {col.links.map(l => (
-              <div 
-                key={l} 
-                className="footer-link text-sm sm:text-[14px] text-white/45 mb-3 cursor-pointer transition-colors duration-200 hover:text-white"
-              >
-                {l}
-              </div>
-            ))}
+          <div key={col.title} className="flex flex-col items-center lg:items-start text-center lg:text-left">
+            <h4 className="text-[11px] font-bold text-white/30 tracking-[0.15em] uppercase mb-6">
+              {col.title}
+            </h4>
+            <div className="flex flex-col gap-3">
+              {col.links.map(l => (
+                <div 
+                  key={l} 
+                  className="text-sm text-white/50 cursor-pointer transition-colors duration-200 hover:text-indigo-400"
+                >
+                  {l}
+                </div>
+              ))}
+            </div>
           </div>
         ))}
       </div>
 
       {/* Bottom Bar */}
-      <div className="border-t border-white/6 pt-7 flex flex-col sm:flex-row justify-between items-center gap-4">
-        <div className="text-xs sm:text-[13px] text-white/30 text-center sm:text-left">
+      <div className="border-t border-white/5 pt-8 flex flex-col lg:flex-row justify-between items-center gap-6">
+        <div className="text-[12px] text-white/30 text-center lg:text-left order-2 lg:order-1">
           © 2026 LocalServe Technologies Pvt. Ltd. All rights reserved.
         </div>
-        <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
+        
+        <div className="flex flex-wrap justify-center gap-5 lg:gap-8 order-1 lg:order-2">
           {["Privacy Policy", "Terms of Service", "Cookie Policy"].map(l => (
-            <span key={l} style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", cursor: "pointer" }}>{l}</span>
+            <span 
+              key={l} 
+              className="text-[12px] text-white/30 hover:text-white cursor-pointer transition-colors"
+            >
+              {l}
+            </span>
           ))}
         </div>
       </div>

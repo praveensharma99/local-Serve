@@ -32,7 +32,12 @@ export default function UsersProviders() {
         ]);
         const uData = await uRes.json();
         const pData = await pRes.json();
-        if (uData.success) setUsers(uData.users || []);
+        if (uData.success) {
+          const raw = uData.users || [];
+          setUsers(
+            raw.filter((u) => String(u.role ?? "user").toLowerCase().trim() === "user")
+          );
+        }
         if (pData.success) setProviders(pData.providers || []);
       } catch {
         toast.error("Failed to load data");
@@ -137,21 +142,19 @@ export default function UsersProviders() {
         <div className="flex gap-2">
           <button
             onClick={() => { setActiveTab("users"); setSearchTerm(""); }}
-            className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold transition-all ${
-              activeTab === "users"
+            className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold transition-all ${activeTab === "users"
                 ? "bg-violet-600 text-white shadow-lg shadow-violet-500/20"
                 : "bg-[#12142a] text-slate-400 border border-white/[0.08] hover:text-white hover:border-white/20"
-            }`}
+              }`}
           >
             <Users className="h-4 w-4" /> Normal Users
           </button>
           <button
             onClick={() => { setActiveTab("providers"); setSearchTerm(""); }}
-            className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold transition-all ${
-              activeTab === "providers"
+            className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold transition-all ${activeTab === "providers"
                 ? "bg-violet-600 text-white shadow-lg shadow-violet-500/20"
                 : "bg-[#12142a] text-slate-400 border border-white/[0.08] hover:text-white hover:border-white/20"
-            }`}
+              }`}
           >
             <Wrench className="h-4 w-4" /> Service Providers
           </button>

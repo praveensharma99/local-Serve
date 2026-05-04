@@ -1,6 +1,8 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { fn, col, where } = require('sequelize');
 const User = require('../models/UserModel');
+const ProviderProfile = require('../models/providerModel');
 const Otp = require('../models/OtpModel');
 const { sendEmail } = require('../utils/email');
 const { otpEmailTemplate } = require('../utils/emailTemplates');
@@ -9,11 +11,29 @@ function generateOtp() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+function normalizeEmail(email) {
+  return String(email || '').trim().toLowerCase();
+}
+
+function normalizeRole(role) {
+  const normalized = String(role || 'user').trim().toLowerCase();
+  return ['user', 'provider', 'admin'].includes(normalized) ? normalized : 'user';
+}
+
+function emailWhere(email) {
+  return where(fn('LOWER', fn('TRIM', col('email'))), normalizeEmail(email));
+}
+
 const sendOtp = async (req, res) => {
-  const { name, email } = req.body;
+  const { name } = req.body;
+  const email = normalizeEmail(req.body.email);
   console.log('[sendOtp] Request received for email:', email);
   try {
-    const existingUser = await User.findOne({ where: { email } });
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required!' });
+    }
+
+    const existingUser = await User.findOne({ where: emailWhere(email) });
     if (existingUser) {
       console.log('[sendOtp] Email already exists:', email);
       return res.status(400).json({ success: false, message: 'Email already exists!' });
@@ -44,13 +64,22 @@ const sendOtp = async (req, res) => {
 };
 
 const register = async (req, res) => {
-  const { name, email, password, role, city, state, otp } = req.body;
+  const { password, otp } = req.body;
+  const name = String(req.body.name || '').trim();
+  const email = normalizeEmail(req.body.email);
+  const role = normalizeRole(req.body.role);
+  const city = String(req.body.city || '').trim();
+  const state = String(req.body.state || '').trim();
   try {
     if (!otp) {
       return res.status(400).json({ success: false, message: 'OTP is required!' });
     }
 
-    const existingUser = await User.findOne({ where: { email } });
+    if (!name || !email || !password) {
+      return res.status(400).json({ success: false, message: 'Name, email and password are required!' });
+    }
+
+    const existingUser = await User.findOne({ where: emailWhere(email) });
     if (existingUser) {
       return res.status(400).json({ success: false, message: 'Email already exists!' });
     }
@@ -72,23 +101,34 @@ const register = async (req, res) => {
       name,
       email,
       password: hashedPassword,
-      role: role || 'user',
+      role,
       city,
       state,
     });
 
     await Otp.destroy({ where: { id: otpRecord.id } });
 
+    const normalizedRole = normalizeRole(user.role);
     const token = jwt.sign(
-      { id: user.id, role: user.role },
+      { id: user.id, role: normalizedRole },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
 
+    const needsOnboarding = normalizedRole === 'provider';
+
     res.status(201).json({
       success: true,
       token,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: normalizedRole,
+        city: user.city,
+        state: user.state,
+        needsOnboarding,
+      },
     });
   } catch (err) {
     console.error('Register error:', err);
@@ -97,28 +137,56 @@ const register = async (req, res) => {
 };
 
 const login = async (req, res) => {
-  const { email, password } = req.body;
+  const email = normalizeEmail(req.body.email);
+  const { password } = req.body;
   try {
-    const user = await User.findOne({ where: { email } });
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'Email and password are required' });
+    }
+
+    const user = await User.findOne({ where: emailWhere(email) });
     if (!user) {
-      return res.status(400).json({ success: false, message: 'User not found' });
+      return res.status(401).json({ success: false, message: 'User not found' });
+    }
+
+    // Check if account is deleted/inactive
+    if (user.isActive === false) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Your account has been deactivated. Please contact support.' 
+      });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ success: false, message: 'Wrong password' });
+      return res.status(401).json({ success: false, message: 'Wrong password' });
+    }
+
+    const normalizedRole = normalizeRole(user.role);
+    let needsOnboarding = false;
+    if (normalizedRole === 'provider') {
+      const providerProfile = await ProviderProfile.findOne({ where: { userId: user.id } });
+      needsOnboarding = !providerProfile;
     }
 
     const token = jwt.sign(
-      { id: user.id, role: user.role },
+      { id: user.id, role: normalizedRole },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
 
-    res.json({ 
-      success: true, 
-      token, 
-      user: { id: user.id, name: user.name, email: user.email, role: user.role, city: user.city, state: user.state } 
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: normalizedRole,
+        city: user.city,
+        state: user.state,
+        needsOnboarding,
+      },
     });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Server error during login' });

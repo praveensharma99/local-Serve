@@ -9,19 +9,17 @@ const ProtectedRoute = ({ children, allowedRole }) => {
 
   // 2. Agar token nahi hai, matlab user login nahi hai
   if (!token || !user) {
-    // Bina login ke access karne par warning (Optional)
-    // toast.warn("Please login to access this page!"); 
     return <Navigate to="/login" replace />;
   }
 
-  // 3. Role-Based Check
-  // Agar user login hai par uska role (e.g., 'user') allowedRole (e.g., 'admin') se match nahi karta
-  if (user.role !== allowedRole) {
+  const userRole = String(user?.role || "").toLowerCase().trim();
+  const needRole = String(allowedRole || "").toLowerCase().trim();
+
+  if (userRole !== needRole) {
     toast.error("Access Denied: You don't have permission! 🚫");
-    
-    // Use uske sahi dashboard par wapas bhej do
-    if (user.role === 'admin') return <Navigate to="/admin" replace />;
-    if (user.role === 'provider') return <Navigate to="/provider" replace />;
+
+    if (userRole === "admin") return <Navigate to="/admin" replace />;
+    if (userRole === "provider") return <Navigate to="/provider" replace />;
     return <Navigate to="/dashboard" replace />;
   }
 

@@ -1,14 +1,14 @@
-// API Configuration
-// Change this URL based on your testing environment:
-// - Desktop: 'http://localhost:5000'
-// - Mobile (same WiFi): 'http://192.168.11.203:5000' (use your computer's IP)
-// - Production: 'https://your-domain.com'
+// API Configuration:
+// - Desktop localhost: uses http://localhost:5000
+// - LAN access: uses current browser hostname with port 5000
+const currentHost =
+  typeof window !== "undefined" ? window.location.hostname : "localhost";
+const apiHost =
+  currentHost === "localhost" || currentHost === "127.0.0.1"
+    ? "localhost"
+    : currentHost;
 
-// ⚠️ FOR MOBILE TESTING - Change to your IP address
-export const API_BASE_URL = 'http://192.168.11.203:5000';
-
-// FOR DESKTOP TESTING - Uncomment this line and comment the line above
-// export const API_BASE_URL = 'http://localhost:5000';
+export const API_BASE_URL = `http://${apiHost}:5000`;
 
 // Helper function for API calls
 export const apiCall = async (endpoint, options = {}) => {

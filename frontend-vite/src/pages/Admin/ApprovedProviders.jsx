@@ -47,7 +47,7 @@ export default function ApprovedProviders() {
   const handleRemove = async (id) => {
     if (!window.confirm("Kya is verified provider ko permanently remove karna hai?")) return;
     try {
-      const res = await fetch(`${backendBaseUrl}/api/admin/delete-provider/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/admin/delete-provider/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
@@ -112,7 +112,7 @@ export default function ApprovedProviders() {
       {filteredProviders.length > 0 ? (
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
           {filteredProviders.map((p) => (
-            <ProviderCard key={p.id} p={p} backendBaseUrl={backendBaseUrl} onRemove={handleRemove} />
+            <ProviderCard key={p.id} p={p} backendBaseUrl={API_BASE_URL} onRemove={handleRemove} />
           ))}
         </div>
       ) : (

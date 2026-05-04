@@ -8,13 +8,26 @@ import Footer from "../components/Footer";
 
 export default function Home() {
   return (
-    <div className="bg-gradient-to-br from-black via-gray-900 to-indigo-950 min-h-screen">
+    /* 
+       Yahan maine 'w-full' aur 'overflow-x-hidden' add kiya hai. 
+       Ye side waali white space (horizontal scroll) ko block kar dega.
+    */
+    <div className="min-h-screen w-full overflow-x-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950">
       <Navbar />
-      <Hero />
-      <Stats />
-      <Services />
-      <HowItWorks />
-      <Reviews />
+      
+      {/* 
+          Kabhi kabhi Hero ya Stats section ke animations 
+          screen se bahar nikalte hain, isliye content ko ek 
+          relative container mein wrap karna safe rehta hai.
+      */}
+      <main className="w-full">
+        <Hero />
+        <Stats />
+        <Services />
+        <HowItWorks />
+        <Reviews />
+      </main>
+
       <Footer />
     </div>
   );

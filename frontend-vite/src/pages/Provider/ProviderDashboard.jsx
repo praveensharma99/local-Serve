@@ -11,10 +11,11 @@ import {
   MapPin,
   LogOut,
   Loader2,
-  TrendingUp,
   Sparkles,
   DollarSign,
   CheckCircle2,
+  Menu,
+  X,
 } from "lucide-react";
 import Swal from "sweetalert2";
 import {
@@ -31,6 +32,7 @@ import {
   Filler,
 } from 'chart.js';
 import { Doughnut, Line } from 'react-chartjs-2';
+import { toast } from "react-toastify";
 import ManageBookings from "./ManageBookings";
 import { API_BASE_URL } from "../../config/api";
 
@@ -58,7 +60,18 @@ export default function ProviderDashboard() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [providerData, setProviderData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
+
+  const selectTab = (id) => {
+    setActiveTab(id);
+    setSidebarOpen(false);
+  };
+
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate("/login");
+  };
   const providerLocation =
     [providerData?.city, providerData?.state].filter(Boolean).join(", ") ||
     "India";
@@ -73,15 +86,24 @@ export default function ProviderDashboard() {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
-        if (data.success) setProviderData(data.profile);
+        if (!res.ok || !data.success) {
+          toast.error(data.message || "Could not load your profile. Try again.");
+          return;
+        }
+        if (data.profileExists === false) {
+          navigate("/provider/onboarding", { replace: true });
+          return;
+        }
+        if (data.profile) setProviderData(data.profile);
       } catch (err) {
         console.error("Fetch error:", err);
+        toast.error("Unable to reach the server.");
       } finally {
         setLoading(false);
       }
     };
     fetchProfile();
-  }, []);
+  }, [navigate]);
 
   // 1. Bookings fetch karne ka function
   const fetchBookings = async () => {
@@ -135,7 +157,7 @@ export default function ProviderDashboard() {
       cancelButtonColor: "#ef4444", // Red-500
       confirmButtonText: "Yes, Reject it!",
       cancelButtonText: "No, Keep it",
-      background: "#12142a", // Tere dashboard ka dark background
+      background: "#0f172a",
       color: "#fff",
       borderRadius: "24px",
     }).then((result) => {
@@ -147,7 +169,7 @@ export default function ProviderDashboard() {
           title: "Rejected!",
           text: "Booking has been rejected.",
           icon: "success",
-          background: "#12142a",
+          background: "#0f172a",
           color: "#fff",
         });
       }
@@ -184,7 +206,7 @@ export default function ProviderDashboard() {
         'rgba(16, 185, 129, 0.85)',
         'rgba(244, 63, 94, 0.85)',
       ],
-      borderColor: '#12142a',
+      borderColor: '#020617',
       borderWidth: 4,
       hoverOffset: 8,
     }],
@@ -197,10 +219,10 @@ export default function ProviderDashboard() {
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: '#12142a',
-        titleColor: '#fff',
+        backgroundColor: '#0f172a',
+        titleColor: '#f8fafc',
         bodyColor: '#94a3b8',
-        borderColor: 'rgba(255,255,255,0.08)',
+        borderColor: 'rgba(148,163,184,0.2)',
         borderWidth: 1,
         padding: 10,
         cornerRadius: 8,
@@ -216,11 +238,11 @@ export default function ProviderDashboard() {
     datasets: [{
       label: 'Bookings',
       data: chartData.counts,
-      borderColor: '#8b5cf6',
-      backgroundColor: 'rgba(139, 92, 246, 0.08)',
+      borderColor: '#6366f1',
+      backgroundColor: 'rgba(99, 102, 241, 0.08)',
       borderWidth: 2.5,
-      pointBackgroundColor: '#8b5cf6',
-      pointBorderColor: '#12142a',
+      pointBackgroundColor: '#6366f1',
+      pointBorderColor: '#020617',
       pointBorderWidth: 2,
       pointRadius: 5,
       pointHoverRadius: 6,
@@ -232,7 +254,7 @@ export default function ProviderDashboard() {
   const lineOptions = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { display: false }, tooltip: { backgroundColor: '#12142a', titleColor: '#fff', bodyColor: '#94a3b8', borderColor: 'rgba(255,255,255,0.08)', borderWidth: 1, padding: 10, cornerRadius: 8 } },
+    plugins: { legend: { display: false }, tooltip: { backgroundColor: '#0f172a', titleColor: '#f8fafc', bodyColor: '#94a3b8', borderColor: 'rgba(148,163,184,0.2)', borderWidth: 1, padding: 10, cornerRadius: 8 } },
     scales: {
       x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 10 } } },
       y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748b', font: { size: 10 }, stepSize: 1 }, beginAtZero: true },
@@ -244,29 +266,30 @@ export default function ProviderDashboard() {
   // --- PENDING STATE ---
   if (providerData?.status === "pending") {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#0a0b1a] p-6 text-center">
-        <div className="w-20 h-20 bg-amber-500/10 rounded-3xl flex items-center justify-center mb-8 border border-amber-500/20 shadow-lg shadow-amber-500/10">
-          <Clock className="text-amber-500" size={40} />
+      <div className="flex min-h-screen flex-col items-center justify-center bg-slate-950 px-6 py-12 text-center font-['Plus_Jakarta_Sans',sans-serif]">
+        <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-500/25 bg-amber-500/10">
+          <Clock className="text-amber-400" size={32} strokeWidth={1.75} />
         </div>
-        <h1 className="text-3xl font-black text-white mb-3">
-          Verification Pending
+        <h1 className="mb-3 max-w-md text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+          Verification pending
         </h1>
-        <p className="text-slate-400 max-w-sm text-sm leading-relaxed font-medium">
-          Bhai, tumhari details mil gayi hain. Admin verify kar raha hai.
-          Approval ke baad saari features unlock ho jayengi.
+        <p className="max-w-sm text-sm leading-relaxed text-slate-400">
+          Your details have been received. The admin is verifying them. All features will be unlocked after approval.
         </p>
-        <div className="mt-10 flex gap-4">
+        <div className="mt-10 flex w-full max-w-xs flex-col gap-3 sm:max-w-none sm:flex-row sm:justify-center">
           <button
+            type="button"
             onClick={() => navigate("/")}
-            className="px-8 py-3 text-sm font-bold bg-white/5 text-slate-300 rounded-2xl hover:bg-white/10 transition-all border border-white/5"
+            className="rounded-xl border border-slate-700 bg-slate-900 px-6 py-3 text-sm font-medium text-slate-200 transition hover:border-slate-600 hover:bg-slate-800"
           >
             Home
           </button>
           <button
+            type="button"
             onClick={() => window.location.reload()}
-            className="px-8 py-3 text-sm font-bold bg-violet-600 text-white rounded-2xl hover:bg-violet-500 shadow-lg shadow-violet-500/30 transition-all"
+            className="rounded-xl bg-indigo-600 px-6 py-3 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-500"
           >
-            Refresh Status
+            Refresh status
           </button>
         </div>
       </div>
@@ -274,190 +297,259 @@ export default function ProviderDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0b1a] text-white flex font-['Plus_Jakarta_Sans',sans-serif]">
-      {/* SIDEBAR - Matched with User Dashboard */}
-      <aside className="hidden lg:flex w-64 flex-shrink-0 flex-col border-r border-white/[0.08] bg-[#0d0e20] p-5">
-        <div className="mb-8 flex items-center gap-3 px-2">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-violet-400 text-white shadow-lg shadow-violet-500/30 text-lg font-black">
-            L
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-['Plus_Jakarta_Sans',sans-serif]">
+      {sidebarOpen ? (
+        <button
+          type="button"
+          aria-label="Close menu"
+          className="fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-[2px] transition-opacity lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      ) : null}
+
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col border-r border-slate-800/80 bg-slate-900 transition-transform duration-200 ease-out lg:z-30 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        }`}
+      >
+        <div className="flex h-full min-h-0 flex-col">
+          <div className="flex items-center justify-between gap-2 border-b border-slate-800/80 px-4 py-4">
+            <button
+              type="button"
+              onClick={() => navigate("/")}
+              className="flex min-w-0 flex-1 items-center gap-3 rounded-lg text-left outline-none ring-indigo-500/40 transition hover:bg-slate-800/50 focus-visible:ring-2"
+            >
+              <img
+                src="/images/logo3.png"
+                alt="LocalServe"
+                className="h-9 w-9 shrink-0 object-contain"
+              />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold tracking-tight text-white">
+                  Local<span className="text-indigo-400">Serve</span>
+                </p>
+                <p className="text-xs text-slate-500">Expert panel</p>
+              </div>
+            </button>
+            <button
+              type="button"
+              className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-800 hover:text-white lg:hidden"
+              aria-label="Close sidebar"
+              onClick={() => setSidebarOpen(false)}
+            >
+              <X className="h-5 w-5" strokeWidth={1.75} />
+            </button>
           </div>
-          <div>
-            <p className="text-base font-black tracking-tight text-white">
-              Local<span className="text-violet-400">Serve</span>
-            </p>
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-              Expert Panel
-            </p>
+
+          <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3" aria-label="Provider sections">
+            {sidebarTabs.map((tab) => {
+              const Icon = tab.icon;
+              const active = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => selectTab(tab.id)}
+                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
+                    active
+                      ? "bg-slate-800 text-white shadow-sm"
+                      : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-100"
+                  }`}
+                >
+                  <Icon className="h-4 w-4 shrink-0 opacity-90" strokeWidth={1.75} />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+
+          <div className="mt-auto border-t border-slate-800/80 p-3">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex w-full items-center gap-3 rounded-lg border border-slate-700/80 bg-slate-900 px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:border-red-500/30 hover:bg-red-950/20 hover:text-red-300"
+            >
+              <LogOut className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+              Logout
+            </button>
           </div>
         </div>
-
-        <nav className="flex-1 space-y-1">
-          {sidebarTabs.map((tab) => {
-            const Icon = tab.icon;
-            const active = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`w-full rounded-xl px-4 py-3 text-left text-sm font-bold transition-all ${
-                  active
-                    ? "bg-gradient-to-r from-violet-600 to-violet-500 text-white shadow-md shadow-violet-500/30"
-                    : "text-slate-400 hover:bg-violet-500/10 hover:text-white"
-                }`}
-              >
-                <span className="flex items-center gap-3">
-                  <Icon className="h-4 w-4" /> {tab.label}
-                </span>
-              </button>
-            );
-          })}
-        </nav>
-
-        <button
-          onClick={() => {
-            localStorage.clear();
-            navigate("/login");
-          }}
-          className="mt-6 flex items-center gap-3 rounded-xl border border-red-400/20 px-4 py-3 text-sm font-bold text-red-400 hover:bg-red-400/10 transition-colors"
-        >
-          <LogOut className="h-4 w-4" /> Logout
-        </button>
       </aside>
 
-      {/* MAIN CONTENT */}
-      <div className="flex flex-1 flex-col min-w-0">
-        {/* TOPBAR - Matched */}
-        <div className="sticky top-0 z-30 border-b border-white/[0.08] bg-[#0a0b1a]/90 backdrop-blur-md">
-          <div className="flex items-center justify-between gap-4 px-8 py-4">
-            <div>
-              <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-violet-400">
-                <Sparkles className="h-3.5 w-3.5" /> Provider Workspace
-              </p>
-              <h1 className="mt-1 text-2xl font-black tracking-tight">
-                Welcome, {providerData?.name}!
-              </h1>
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col lg:pl-64">
+        <header className="sticky top-0 z-20 border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md">
+          <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
+              <button
+                type="button"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-800 bg-slate-900 text-slate-300 transition hover:border-slate-700 hover:bg-slate-800 hover:text-white lg:hidden"
+                aria-label="Open menu"
+                aria-expanded={sidebarOpen}
+                onClick={() => setSidebarOpen(true)}
+              >
+                <Menu className="h-5 w-5" strokeWidth={1.75} />
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/")}
+                className="flex shrink-0 rounded-lg py-1 outline-none ring-indigo-500/40 transition hover:bg-slate-900/80 focus-visible:ring-2 lg:hidden"
+                aria-label="Home"
+              >
+                <img src="/images/logo3.png" alt="" className="h-8 w-8 object-contain" />
+              </button>
+              <div className="min-w-0">
+                <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-indigo-400/90">
+                  <Sparkles className="h-3 w-3 shrink-0" />
+                  <span className="truncate">Provider workspace</span>
+                </p>
+                <h1 className="mt-0.5 truncate text-lg font-semibold tracking-tight text-white sm:text-xl">
+                  Welcome, {providerData?.name || "there"}
+                </h1>
+              </div>
             </div>
 
-            <div className="flex items-center gap-4">
-              <div className="hidden sm:flex items-center gap-2 rounded-xl border border-white/[0.08] bg-[#12142a] px-4 py-2.5">
-                <MapPin className="h-4 w-4 text-emerald-400" />
-                <span className="text-sm font-bold text-slate-300">
-                  {providerLocation}
-                </span>
+            <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+              <div className="hidden max-w-[140px] items-center gap-2 rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 sm:flex md:max-w-[200px]">
+                <MapPin className="h-3.5 w-3.5 shrink-0 text-emerald-400" strokeWidth={1.75} />
+                <span className="truncate text-xs font-medium text-slate-300">{providerLocation}</span>
               </div>
-              <button className="relative rounded-xl border border-white/[0.08] bg-[#12142a] p-2.5 text-slate-400 hover:text-white">
-                <Bell size={20} />
-                <span className="absolute right-2.5 top-2.5 h-1.5 w-1.5 rounded-full bg-violet-500"></span>
+              <button
+                type="button"
+                className="relative inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-800 bg-slate-900 text-slate-400 transition hover:border-slate-700 hover:text-slate-100"
+                aria-label="Notifications"
+              >
+                <Bell className="h-[18px] w-[18px]" strokeWidth={1.75} />
+                <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-indigo-500" />
               </button>
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-violet-600 to-violet-400 flex items-center justify-center font-black text-white shadow-lg">
-                {providerData?.name?.charAt(0)}
+              <div
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-800 bg-gradient-to-br from-indigo-600 to-indigo-500 text-xs font-semibold text-white"
+                aria-hidden
+              >
+                {providerData?.name?.charAt(0) || "?"}
               </div>
             </div>
           </div>
-        </div>
+        </header>
 
-        {/* CONTENT AREA */}
-        <main className="flex-1 overflow-y-auto p-8">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           {activeTab === "dashboard" && (
-            <div className="space-y-6">
-              {/* Stats Row */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Total Earnings" val="₹0" icon={<DollarSign size={18} />} color="emerald" />
-                <StatCard label="Confirmed" val={chartData.accepted} icon={<CheckCircle2 size={18} />} color="violet" />
-                <StatCard label="Profile Rating" val="5.0" icon={<Star size={18} />} color="amber" />
-                <StatCard label="Pending" val={chartData.pending} icon={<Clock size={18} />} color="rose" />
+            <div className="mx-auto max-w-7xl space-y-5 sm:space-y-6">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+                <StatCard label="Total Earnings" val="₹0" icon={<DollarSign size={18} strokeWidth={1.75} />} color="emerald" />
+                <StatCard label="Confirmed" val={chartData.accepted} icon={<CheckCircle2 size={18} strokeWidth={1.75} />} color="violet" />
+                <StatCard label="Profile Rating" val="5.0" icon={<Star size={18} strokeWidth={1.75} />} color="amber" />
+                <StatCard label="Pending" val={chartData.pending} icon={<Clock size={18} strokeWidth={1.75} />} color="rose" />
               </div>
 
-              {/* Charts + Recent */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Donut Chart */}
-                <div className="lg:col-span-2 rounded-2xl border border-white/[0.06] bg-[#12142a] p-6">
-                  <div className="mb-5">
-                    <h3 className="text-sm font-black text-white">Bookings Overview</h3>
-                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Status breakdown</p>
+              <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-6">
+                <div className="rounded-2xl border border-slate-800/80 bg-slate-900/40 p-4 sm:p-6 lg:col-span-2">
+                  <div className="mb-4 sm:mb-5">
+                    <h3 className="text-sm font-semibold text-white">Bookings overview</h3>
+                    <p className="mt-0.5 text-[11px] font-medium uppercase tracking-wider text-slate-500">Status breakdown</p>
                   </div>
-                  <div className="flex items-center gap-8">
-                    <div className="relative flex-1 h-56">
+                  <div className="flex flex-col items-stretch gap-6 sm:flex-row sm:items-center sm:gap-8">
+                    <div className="relative mx-auto h-48 w-full max-w-[220px] sm:h-56 sm:max-w-[280px] sm:flex-1">
                       <Doughnut data={doughnutData} options={doughnutOptions} />
-                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <p className="text-3xl font-black text-white">{chartData.pending + chartData.accepted + chartData.rejected}</p>
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mt-0.5">Total</p>
+                      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                        <p className="text-2xl font-semibold tabular-nums text-white sm:text-3xl">
+                          {chartData.pending + chartData.accepted + chartData.rejected}
+                        </p>
+                        <p className="mt-0.5 text-[10px] font-medium uppercase tracking-wider text-slate-500">Total</p>
                       </div>
                     </div>
-                    <div className="w-36 space-y-4">
+                    <div className="flex flex-wrap justify-center gap-4 sm:w-36 sm:flex-col sm:justify-center sm:gap-4 sm:pl-1">
                       {[
                         { label: 'Pending', value: chartData.pending, dot: 'bg-amber-400', text: 'text-amber-400' },
                         { label: 'Confirmed', value: chartData.accepted, dot: 'bg-emerald-400', text: 'text-emerald-400' },
                         { label: 'Rejected', value: chartData.rejected, dot: 'bg-rose-400', text: 'text-rose-400' },
                       ].map((s) => (
-                        <div key={s.label} className="flex items-center justify-between">
-                          <div className="flex items-center gap-2.5">
-                            <span className={`h-2.5 w-2.5 rounded-full ${s.dot} shadow-sm`} />
-                            <span className="text-xs font-bold text-slate-400">{s.label}</span>
+                        <div key={s.label} className="flex min-w-[120px] items-center justify-between gap-4 sm:w-full">
+                          <div className="flex items-center gap-2">
+                            <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${s.dot}`} />
+                            <span className="text-xs font-medium text-slate-400">{s.label}</span>
                           </div>
-                          <span className={`text-sm font-black ${s.text}`}>{s.value}</span>
+                          <span className={`text-sm font-semibold tabular-nums ${s.text}`}>{s.value}</span>
                         </div>
                       ))}
                     </div>
                   </div>
                 </div>
 
-                {/* Recent Requests Mini */}
-                <div className="rounded-2xl border border-white/[0.06] bg-[#12142a] p-6">
-                  <div className="flex items-center justify-between mb-4">
+                <div className="rounded-2xl border border-slate-800/80 bg-slate-900/40 p-4 sm:p-6">
+                  <div className="mb-4 flex items-center justify-between gap-2">
                     <div>
-                      <h3 className="text-sm font-black text-white">Recent</h3>
-                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Latest requests</p>
+                      <h3 className="text-sm font-semibold text-white">Recent</h3>
+                      <p className="mt-0.5 text-[11px] font-medium uppercase tracking-wider text-slate-500">Latest requests</p>
                     </div>
-                    <button onClick={() => setActiveTab("orders")} className="text-[10px] font-black uppercase tracking-widest text-violet-400 hover:text-violet-300 transition-colors">View All</button>
+                    <button
+                      type="button"
+                      onClick={() => selectTab("orders")}
+                      className="shrink-0 text-[11px] font-medium uppercase tracking-wider text-indigo-400 transition hover:text-indigo-300"
+                    >
+                      View all
+                    </button>
                   </div>
-                  <div className="space-y-2.5">
+                  <div className="space-y-2">
                     {bookings.slice(0, 6).map((booking) => (
-                      <div key={booking.id} className="flex items-center gap-3 p-3 rounded-xl border border-white/[0.04] bg-white/[0.02] hover:bg-white/[0.04] transition-all cursor-pointer" onClick={() => setActiveTab("orders")}>
-                        <div className="h-9 w-9 rounded-full bg-gradient-to-br from-violet-600 to-violet-400 flex items-center justify-center text-xs font-black text-white flex-shrink-0 shadow-md shadow-violet-500/10">
+                      <div
+                        key={booking.id}
+                        className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-800/60 bg-slate-950/30 p-3 transition-colors hover:border-slate-700 hover:bg-slate-800/40"
+                        onClick={() => selectTab("orders")}
+                      >
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-600 to-indigo-500 text-xs font-semibold text-white">
                           {booking.customer?.name?.charAt(0) || '?'}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold text-white truncate">{booking.customer?.name || 'Unknown'}</p>
-                          <p className="text-[10px] text-slate-500">{new Date(booking.bookingDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} · {booking.bookingSlot || '--'}</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-medium text-white">{booking.customer?.name || 'Unknown'}</p>
+                          <p className="text-[10px] text-slate-500">
+                            {new Date(booking.bookingDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} · {booking.bookingSlot || '--'}
+                          </p>
                         </div>
-                        <span className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${booking.status === 'pending' ? 'bg-amber-400 shadow-sm shadow-amber-400/30' : booking.status === 'accepted' ? 'bg-emerald-400 shadow-sm shadow-emerald-400/30' : 'bg-rose-400 shadow-sm shadow-rose-400/30'}`} />
+                        <span
+                          className={`h-2.5 w-2.5 shrink-0 rounded-full ${
+                            booking.status === 'pending'
+                              ? 'bg-amber-400'
+                              : booking.status === 'accepted'
+                                ? 'bg-emerald-400'
+                                : 'bg-rose-400'
+                          }`}
+                        />
                       </div>
                     ))}
                     {bookings.length === 0 && (
-                      <div className="text-center py-10">
-                        <p className="text-xs text-slate-500 font-medium">No requests yet</p>
-                        <p className="text-[10px] text-slate-600 mt-1">New bookings appear here</p>
+                      <div className="py-10 text-center">
+                        <p className="text-xs font-medium text-slate-500">No requests yet</p>
+                        <p className="mt-1 text-[10px] text-slate-600">New bookings appear here</p>
                       </div>
                     )}
                   </div>
                 </div>
               </div>
 
-              {/* Line Chart + Profile */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Line Chart */}
-                <div className="rounded-2xl border border-white/[0.06] bg-[#12142a] p-6">
-                  <div className="mb-6">
-                    <h3 className="text-sm font-black text-white">7-Day Activity</h3>
-                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Daily booking requests</p>
+              <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
+                <div className="rounded-2xl border border-slate-800/80 bg-slate-900/40 p-4 sm:p-6">
+                  <div className="mb-4 sm:mb-6">
+                    <h3 className="text-sm font-semibold text-white">7-day activity</h3>
+                    <p className="mt-0.5 text-[11px] font-medium uppercase tracking-wider text-slate-500">Daily booking requests</p>
                   </div>
-                  <div className="h-52">
+                  <div className="h-48 sm:h-52">
                     <Line data={lineData} options={lineOptions} />
                   </div>
                 </div>
 
-                {/* Profile Card */}
-                <div className="rounded-2xl border border-white/[0.06] bg-[#12142a] p-6">
-                  <h3 className="text-sm font-black text-white mb-5">Professional Identity</h3>
-                  <div className="space-y-3.5">
+                <div className="rounded-2xl border border-slate-800/80 bg-slate-900/40 p-4 sm:p-6">
+                  <h3 className="mb-4 text-sm font-semibold text-white sm:mb-5">Professional identity</h3>
+                  <div className="space-y-3">
                     <InfoRow label="Specialization" val={providerData?.category} />
                     <InfoRow label="Experience" val={`${providerData?.experience} Years`} />
                     <InfoRow label="Hourly Rate" val={`₹${providerData?.pricePerHour}/hr`} />
                     <InfoRow label="Service Mode" val="Home Visit" />
                     <InfoRow label="Location" val={providerLocation} />
                   </div>
-                  <button className="w-full mt-6 py-3 bg-gradient-to-r from-violet-600 to-violet-500 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] transition-all shadow-lg shadow-violet-500/20">
+                  <button
+                    type="button"
+                    className="mt-5 w-full rounded-xl bg-indigo-600 py-3 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-indigo-500 sm:mt-6"
+                  >
                     Update Profile
                   </button>
                 </div>
@@ -474,12 +566,12 @@ export default function ProviderDashboard() {
           )}
 
           {activeTab === "earnings" && (
-            <div className="flex flex-col items-center justify-center min-h-[60vh]">
-              <div className="h-20 w-20 rounded-3xl bg-white/5 flex items-center justify-center mb-6">
-                <Wallet className="h-8 w-8 text-slate-500" />
+            <div className="flex min-h-[50vh] flex-col items-center justify-center px-4 py-12 sm:min-h-[60vh]">
+              <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-800 bg-slate-900">
+                <Wallet className="h-7 w-7 text-slate-500" strokeWidth={1.75} />
               </div>
-              <h2 className="text-xl font-black text-white mb-2">Earnings</h2>
-              <p className="text-sm text-slate-400">This section is coming soon.</p>
+              <h2 className="mb-2 text-lg font-semibold text-white sm:text-xl">Earnings</h2>
+              <p className="text-center text-sm text-slate-400">This section is coming soon.</p>
             </div>
           )}
 
@@ -494,21 +586,21 @@ export default function ProviderDashboard() {
 
 function StatCard({ label, val, icon, color }) {
   const styles = {
-    violet: { border: "border-violet-500/20", iconBg: "bg-violet-500/10", iconText: "text-violet-400" },
-    emerald: { border: "border-emerald-500/20", iconBg: "bg-emerald-500/10", iconText: "text-emerald-400" },
-    amber: { border: "border-amber-500/20", iconBg: "bg-amber-500/10", iconText: "text-amber-400" },
-    rose: { border: "border-rose-500/20", iconBg: "bg-rose-500/10", iconText: "text-rose-400" },
+    violet: { border: "border-indigo-500/25", iconBg: "bg-indigo-500/10", iconText: "text-indigo-400" },
+    emerald: { border: "border-emerald-500/25", iconBg: "bg-emerald-500/10", iconText: "text-emerald-400" },
+    amber: { border: "border-amber-500/25", iconBg: "bg-amber-500/10", iconText: "text-amber-400" },
+    rose: { border: "border-rose-500/25", iconBg: "bg-rose-500/10", iconText: "text-rose-400" },
   };
   const s = styles[color];
 
   return (
-    <div className={`rounded-2xl border ${s.border} p-5 flex items-center gap-4 bg-[#12142a] hover:border-white/[0.12] transition-all`}>
-      <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${s.iconBg} ${s.iconText}`}>
+    <div className={`flex items-center gap-3 rounded-xl border ${s.border} bg-slate-900/40 p-3 transition-colors hover:border-slate-600/80 sm:gap-4 sm:rounded-2xl sm:p-4`}>
+      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg sm:h-11 sm:w-11 sm:rounded-xl ${s.iconBg} ${s.iconText}`}>
         {icon}
       </div>
-      <div>
-        <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{label}</p>
-        <h3 className="text-xl font-black text-white mt-0.5">{val}</h3>
+      <div className="min-w-0">
+        <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">{label}</p>
+        <h3 className="mt-0.5 truncate text-base font-semibold tabular-nums text-white sm:text-lg">{val}</h3>
       </div>
     </div>
   );
@@ -516,11 +608,11 @@ function StatCard({ label, val, icon, color }) {
 
 function InfoRow({ label, val }) {
   return (
-    <div className="flex justify-between items-center text-xs">
-      <span className="text-slate-500 font-bold uppercase tracking-tighter">
+    <div className="flex items-center justify-between gap-3 text-xs">
+      <span className="shrink-0 font-medium uppercase tracking-wide text-slate-500">
         {label}
       </span>
-      <span className="text-slate-200 font-black italic">
+      <span className="truncate text-right font-medium text-slate-200">
         {val || "Not Set"}
       </span>
     </div>
@@ -529,11 +621,11 @@ function InfoRow({ label, val }) {
 
 function InfoChip({ label, val }) {
   return (
-    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-3">
-      <p className="mb-1 text-[9px] font-black uppercase tracking-widest text-slate-500">
+    <div className="rounded-xl border border-slate-800/80 bg-slate-950/30 p-3">
+      <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-slate-500">
         {label}
       </p>
-      <p className="break-words text-[11px] font-bold leading-relaxed text-slate-300">
+      <p className="break-words text-[11px] font-medium leading-relaxed text-slate-300">
         {val || "Not Set"}
       </p>
     </div>
@@ -579,115 +671,115 @@ function ProviderProfilePanel({ providerData, setProviderData }) {
       const data = await res.json();
       if (data.success) {
         setProviderData({ ...providerData, ...formData });
-        Swal.fire({ icon: 'success', title: 'Success!', text: data.message, timer: 2000, showConfirmButton: false, background: '#12142a', color: '#e2e8f0' });
+        Swal.fire({ icon: 'success', title: 'Success!', text: data.message, timer: 2000, showConfirmButton: false, background: '#0f172a', color: '#e2e8f0' });
       } else {
-        Swal.fire({ icon: 'error', title: 'Error!', text: data.message, background: '#12142a', color: '#e2e8f0' });
+        Swal.fire({ icon: 'error', title: 'Error!', text: data.message, background: '#0f172a', color: '#e2e8f0' });
       }
     } catch (err) {
-      Swal.fire({ icon: 'error', title: 'Error!', text: err.message, background: '#12142a', color: '#e2e8f0' });
+      Swal.fire({ icon: 'error', title: 'Error!', text: err.message, background: '#0f172a', color: '#e2e8f0' });
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="animate-fadeIn">
+    <div className="animate-fadeIn mx-auto max-w-3xl">
       <div className="mb-6">
-        <p className="text-[10px] font-black uppercase tracking-widest text-violet-400 mb-2">Settings</p>
-        <h2 className="text-2xl font-black text-white">Edit Profile</h2>
+        <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-indigo-400/90">Settings</p>
+        <h2 className="text-xl font-semibold tracking-tight text-white sm:text-2xl">Edit profile</h2>
       </div>
 
-      <form onSubmit={handleSave} className="max-w-3xl rounded-2xl border border-white/[0.08] bg-[#12142a] p-6 sm:p-8">
-        <p className="text-xs font-bold text-violet-400 uppercase tracking-wider mb-4">Personal Information</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-8">
+      <form onSubmit={handleSave} className="rounded-2xl border border-slate-800/80 bg-slate-900/40 p-5 sm:p-8">
+        <p className="mb-4 text-xs font-medium uppercase tracking-wide text-slate-400">Personal information</p>
+        <div className="mb-8 grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div>
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Full Name</label>
+            <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">Full name</label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white focus:border-violet-500 focus:outline-none transition-colors"
+              className="w-full rounded-lg border border-slate-700/80 bg-slate-950/50 px-3 py-2.5 text-sm text-white outline-none ring-indigo-500/30 transition focus:border-indigo-500/50 focus:ring-2"
               required
             />
           </div>
 
           <div>
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Email</label>
+            <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">Email</label>
             <input
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white focus:border-violet-500 focus:outline-none transition-colors"
+              className="w-full rounded-lg border border-slate-700/80 bg-slate-950/50 px-3 py-2.5 text-sm text-white outline-none ring-indigo-500/30 transition focus:border-indigo-500/50 focus:ring-2"
               required
             />
           </div>
 
           <div>
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Phone</label>
+            <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">Phone</label>
             <input
               type="text"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white focus:border-violet-500 focus:outline-none transition-colors"
+              className="w-full rounded-lg border border-slate-700/80 bg-slate-950/50 px-3 py-2.5 text-sm text-white outline-none ring-indigo-500/30 transition focus:border-indigo-500/50 focus:ring-2"
               placeholder="e.g. 9876543210"
             />
           </div>
 
           <div>
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Category</label>
+            <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">Category</label>
             <input
               type="text"
               value={formData.category}
               onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white focus:border-violet-500 focus:outline-none transition-colors"
+              className="w-full rounded-lg border border-slate-700/80 bg-slate-950/50 px-3 py-2.5 text-sm text-white outline-none ring-indigo-500/30 transition focus:border-indigo-500/50 focus:ring-2"
               placeholder="e.g. Electrician"
             />
           </div>
 
           <div>
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">City</label>
+            <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">City</label>
             <input
               type="text"
               value={formData.city}
               onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white focus:border-violet-500 focus:outline-none transition-colors"
+              className="w-full rounded-lg border border-slate-700/80 bg-slate-950/50 px-3 py-2.5 text-sm text-white outline-none ring-indigo-500/30 transition focus:border-indigo-500/50 focus:ring-2"
               placeholder="e.g. Delhi"
             />
           </div>
 
           <div>
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">State</label>
+            <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">State</label>
             <input
               type="text"
               value={formData.state}
               onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white focus:border-violet-500 focus:outline-none transition-colors"
+              className="w-full rounded-lg border border-slate-700/80 bg-slate-950/50 px-3 py-2.5 text-sm text-white outline-none ring-indigo-500/30 transition focus:border-indigo-500/50 focus:ring-2"
               placeholder="e.g. Delhi NCR"
             />
           </div>
         </div>
 
-        <p className="text-xs font-bold text-violet-400 uppercase tracking-wider mb-4">Professional Details</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <p className="mb-4 text-xs font-medium uppercase tracking-wide text-slate-400">Professional details</p>
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div>
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Experience (years)</label>
+            <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">Experience (years)</label>
             <input
               type="number"
               value={formData.experience}
               onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white focus:border-violet-500 focus:outline-none transition-colors"
+              className="w-full rounded-lg border border-slate-700/80 bg-slate-950/50 px-3 py-2.5 text-sm text-white outline-none ring-indigo-500/30 transition focus:border-indigo-500/50 focus:ring-2"
               placeholder="e.g. 5"
               min="0"
             />
           </div>
 
           <div>
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Price per Hour (₹)</label>
+            <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">Price per hour (₹)</label>
             <input
               type="number"
               value={formData.pricePerHour}
               onChange={(e) => setFormData({ ...formData, pricePerHour: e.target.value })}
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white focus:border-violet-500 focus:outline-none transition-colors"
+              className="w-full rounded-lg border border-slate-700/80 bg-slate-950/50 px-3 py-2.5 text-sm text-white outline-none ring-indigo-500/30 transition focus:border-indigo-500/50 focus:ring-2"
               placeholder="e.g. 500"
               min="0"
             />
@@ -697,10 +789,10 @@ function ProviderProfilePanel({ providerData, setProviderData }) {
         <button
           type="submit"
           disabled={saving}
-          className="mt-8 w-full sm:w-auto px-8 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="mt-8 flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
         >
           {saving ? <Loader2 className="animate-spin" size={16} /> : null}
-          {saving ? 'Saving...' : 'Save Changes'}
+          {saving ? 'Saving...' : 'Save changes'}
         </button>
       </form>
 
@@ -720,12 +812,13 @@ function ProviderProfilePanel({ providerData, setProviderData }) {
 
 function LoadingScreen() {
   return (
-    <div className="flex h-screen flex-col items-center justify-center gap-4 bg-[#0a0b1a]">
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-violet-400 shadow-lg shadow-violet-500/30">
-        <Loader2 className="animate-spin text-white" size={22} />
+    <div className="flex h-screen flex-col items-center justify-center gap-4 bg-slate-950 px-6 font-['Plus_Jakarta_Sans',sans-serif]">
+      <img src="/images/logo3.png" alt="" className="h-10 w-10 object-contain opacity-90" />
+      <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-800 bg-slate-900">
+        <Loader2 className="animate-spin text-indigo-400" size={20} strokeWidth={1.75} />
       </div>
-      <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
-        Accessing Expert Panel...
+      <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+        Accessing expert panel…
       </p>
     </div>
   );

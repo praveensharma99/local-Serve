@@ -14,20 +14,93 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { io } from "socket.io-client";
+import { toast } from "react-toastify";
 import ChatDrawer from "../../components/ChatDrawer";
 import { API_BASE_URL } from "../../config/api";
 
 export default function ManageBookings({
-  bookings,
-  handleStatusUpdate,
-  handleRejectConfirm,
+  bookings: bookingsProp,
+  handleStatusUpdate: handleStatusUpdateProp,
+  handleRejectConfirm: handleRejectConfirmProp,
 }) {
+  const [localBookings, setLocalBookings] = useState([]);
+  const [loading, setLoading] = useState(!Array.isArray(bookingsProp));
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortOrder, setSortOrder] = useState("newest");
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [chatBooking, setChatBooking] = useState(null);
   const [unreadCounts, setUnreadCounts] = useState({});
+  const bookings = Array.isArray(bookingsProp) ? bookingsProp : localBookings;
+
+  const fetchLocalBookings = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_BASE_URL}/api/bookings/provider-requests`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setLocalBookings(data.bookings || []);
+      } else {
+        setLocalBookings([]);
+        toast.error(data.message || "Failed to load bookings");
+      }
+    } catch (err) {
+      console.error("Provider bookings fetch error:", err);
+      setLocalBookings([]);
+      toast.error("Failed to load bookings");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (Array.isArray(bookingsProp)) {
+      setLoading(false);
+      return;
+    }
+    fetchLocalBookings();
+  }, [bookingsProp]);
+
+  const handleStatusUpdate = async (bookingId, newStatus) => {
+    if (handleStatusUpdateProp) {
+      handleStatusUpdateProp(bookingId, newStatus);
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_BASE_URL}/api/bookings/status/${bookingId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success(data.message || "Booking updated");
+        fetchLocalBookings();
+      } else {
+        toast.error(data.message || "Status update failed");
+      }
+    } catch (err) {
+      console.error("Status update error:", err);
+      toast.error("Status update failed");
+    }
+  };
+
+  const handleRejectConfirm = (bookingId) => {
+    if (handleRejectConfirmProp) {
+      handleRejectConfirmProp(bookingId);
+      return;
+    }
+    if (window.confirm("Are you sure you want to reject this service request?")) {
+      handleStatusUpdate(bookingId, "rejected");
+    }
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -187,6 +260,19 @@ export default function ManageBookings({
     { key: "rejected", label: "Rejected" },
     { key: "completed", label: "Completed" },
   ];
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-violet-400 shadow-lg shadow-violet-500/30">
+          <Clock className="h-5 w-5 animate-pulse text-white" />
+        </div>
+        <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
+          Loading bookings...
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

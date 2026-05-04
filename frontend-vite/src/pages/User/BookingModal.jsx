@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { API_BASE_URL } from "../../config/api";
+import { loadRazorpayCheckout } from "../../utils/loadRazorpayCheckout";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -17,18 +18,6 @@ const TIME_SLOTS = [
 
 // Busy slots — ideally aayenge backend se
 const BUSY_SLOTS = [];
-
-function loadRazorpayCheckout() {
-  if (window.Razorpay) return Promise.resolve(true);
-
-  return new Promise((resolve) => {
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-}
 
 function getNext7Days() {
   const today = new Date();
@@ -106,7 +95,7 @@ const BookingModal = ({ isOpen, onClose, provider }) => {
     const token = localStorage.getItem("token");
     const isLoaded = await loadRazorpayCheckout();
 
-    if (!isLoaded || !window.Razorpay) {
+    if (!isLoaded || typeof window.Razorpay !== "function") {
       toast.error("Razorpay checkout could not load. Please try again.");
       return false;
     }

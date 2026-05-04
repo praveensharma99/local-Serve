@@ -13,7 +13,8 @@ state: {
   type: DataTypes.STRING,
   allowNull: true,
 },
-  role: { type: DataTypes.STRING, defaultValue: 'user' }
+  role: { type: DataTypes.STRING, defaultValue: 'user' },
+  isActive: { type: DataTypes.BOOLEAN, defaultValue: true }
 
 }, {
   tableName: 'users',

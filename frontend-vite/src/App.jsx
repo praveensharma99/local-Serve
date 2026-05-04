@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -10,11 +10,16 @@ import Register from "./pages/Register";
 // import UserDashboard from './pages/UserDashboard';
 import UserDashboard from "./pages/User/UserDashboard";
 import ServiceProviders from "./pages/User/ServiceProviders";
+import UserBookings from "./pages/User/UserBookings";
 
 // Folder wale pages
 import AdminDashboard from "./pages/Admin/AdminDashboard";
+import AdminBookings from "./pages/Admin/AdminBookings";
+import UsersProviders from "./pages/Admin/UsersProviders";
+import AddService from "./pages/Admin/AddService";
 import ProviderDashboard from "./pages/Provider/ProviderDashboard";
 import Onboarding from "./pages/Provider/Onboarding";
+import ManageBookings from "./pages/Provider/ManageBookings";
 
 // Security Component
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -45,17 +50,21 @@ function App() {
           }
         />
 
+        {/* User Bookings */}
+        <Route
+          path="/bookings"
+          element={
+            <ProtectedRoute allowedRole="user">
+              <UserBookings />
+            </ProtectedRoute>
+          }
+        />
+
         {/* route for the user to service provder */}
         <Route path="/services/:category" element={<ServiceProviders />} />
 
         {/* Service Provider Ke Pages */}
-
-        {/* Temporary: Bina protection ke check karne ke liye */}
-<Route path="/admin" element={<AdminDashboard />} /> 
-<Route path="/provider" element={<ProviderDashboard />} />
-{/* <Route path="/provider/onboarding" element={<Onboarding />} /> */}
-<Route path="/onboarding" element={<Onboarding />} />
-        {/* <Route
+        <Route
           path="/provider"
           element={
             <ProtectedRoute allowedRole="provider">
@@ -70,7 +79,15 @@ function App() {
               <Onboarding />
             </ProtectedRoute>
           } 
-        /> */}
+        />
+        <Route
+          path="/provider/bookings"
+          element={
+            <ProtectedRoute allowedRole="provider">
+              <ManageBookings />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Admin Ka Control Panel */}
         <Route
@@ -81,6 +98,33 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/admin/bookings"
+          element={
+            <ProtectedRoute allowedRole="admin">
+              <AdminBookings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/users-providers"
+          element={
+            <ProtectedRoute allowedRole="admin">
+              <UsersProviders />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/add-service"
+          element={
+            <ProtectedRoute allowedRole="admin">
+              <AddService />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 404 - Not Found */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

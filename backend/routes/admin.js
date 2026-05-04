@@ -4,13 +4,28 @@ const User = require('../models/UserModel');
 const ProviderProfile = require('../models/providerModel');
 const authMiddleware = require('../middleware/authMiddleware');
 const isAdmin = require('../middleware/isAdmin');
+const { Op, fn, col, where } = require('sequelize');
+
+/** Customers only: role `user` (case-insensitive), not admin or provider */
+const customerUserWhere = {
+    [Op.and]: [
+        where(fn('LOWER', fn('TRIM', col('role'))), 'user'),
+        { [Op.or]: [{ isActive: true }, { isActive: null }] }
+    ]
+};
 
 // 1. DASHBOARD STATS
 router.get('/dashboard-stats', authMiddleware, isAdmin, async (req, res) => {
     try {
-        const totalUsers = await User.count({ where: { role: 'user' } });
+        const totalUsers = await User.count({ where: customerUserWhere });
+        const BookingModel = require('../models/BookingModel');
         const activeProviders = await ProviderProfile.count({ where: { status: 'approved' } });
         const pendingProviders = await ProviderProfile.count({ where: { status: 'pending' } });
+        const totalBookings = await BookingModel.count();
+        const accepted = await BookingModel.count({ where: { status: 'accepted' } });
+        const pending = await BookingModel.count({ where: { status: 'pending' } });
+        const rejected = await BookingModel.count({ where: { status: 'rejected' } });
+        const completed = await BookingModel.count({ where: { status: 'completed' } });
 
         const pendingQueue = await ProviderProfile.findAll({
             where: { status: 'pending' },
@@ -27,8 +42,9 @@ router.get('/dashboard-stats', authMiddleware, isAdmin, async (req, res) => {
             stats: {
                 users: totalUsers,
                 providers: activeProviders,
-                pending: pendingProviders,
-                revenue: "2.4L"
+                bookings: totalBookings,
+                revenue: 240000,
+                bookingStats: { accepted, pending, rejected, completed }
             },
             pendingQueue: pendingQueue.map(p => ({
                 id: p.id,
@@ -53,8 +69,8 @@ router.get('/dashboard-stats', authMiddleware, isAdmin, async (req, res) => {
 router.get('/all-users', authMiddleware, isAdmin, async (req, res) => {
     try {
         const users = await User.findAll({
-            where: { role: 'user' },
-            attributes: ['id', 'name', 'email', 'createdAt', 'city', 'state'],
+            where: customerUserWhere,
+            attributes: ['id', 'name', 'email', 'createdAt', 'city', 'state', 'isActive', 'role'],
             order: [['createdAt', 'DESC']]
         });
         res.status(200).json({ success: true, users });
@@ -63,19 +79,22 @@ router.get('/all-users', authMiddleware, isAdmin, async (req, res) => {
     }
 });
 
-// 3. DELETE USER
+// 3. DELETE USER (Soft Delete - Set isActive = false)
 router.delete('/delete-user/:id', authMiddleware, isAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        const result = await User.destroy({
-            where: { id: id, role: 'user' }
-        });
-        if (result) {
-            res.json({ success: true, message: "User successfully deleted!" });
-        } else {
-            res.status(404).json({ success: false, message: "User nahi mila!" });
+        const user = await User.findByPk(id);
+        
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User nahi mila!" });
         }
+
+        // Soft delete: Set isActive to false instead of destroying
+        await user.update({ isActive: false });
+        
+        res.json({ success: true, message: "User successfully deactivated!" });
     } catch (error) {
+        console.error('Delete user error:', error);
         res.status(500).json({ success: false, message: "Delete fail ho gaya" });
     }
 });

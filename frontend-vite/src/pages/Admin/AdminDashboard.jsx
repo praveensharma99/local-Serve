@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -6,10 +8,11 @@ import AdminBookings from "./AdminBookings";
 import AddService from "./AddService";
 
 import {
-  LayoutDashboard, Users, Wrench, LogOut, ShieldCheck,
+  LayoutDashboard, Users, Wrench, LogOut,
   CheckCircle, XCircle, Loader2, PlusSquare, Search, Bell,
   Clock, IndianRupee, CalendarDays, AlertTriangle, FileText,
   Sparkles, RefreshCw, MapPin, BarChart3, PieChart, TrendingUp,
+  Menu, X,
 } from "lucide-react";
 import { API_BASE_URL } from "../../config/api";
 
@@ -42,6 +45,7 @@ export default function AdminDashboard() {
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
   const [bookingStats, setBookingStats] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
 
   const fetchDashboardData = async ({ silent = false } = {}) => {
@@ -80,6 +84,16 @@ export default function AdminDashboard() {
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
     if (tabId !== "overview") setSearch("");
+  };
+
+  const selectTab = (tabId) => {
+    handleTabChange(tabId);
+    setSidebarOpen(false);
+  };
+
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate("/login");
   };
 
   const handleProviderAction = async (id, action) => {
@@ -121,85 +135,121 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0a0b1a] text-white flex">
-      {/* SIDEBAR */}
-      <aside className="hidden lg:flex w-64 flex-shrink-0 flex-col border-r border-white/[0.08] bg-[#0d0e20] p-5">
-        <BrandBlock />
-        <nav className="flex-1 space-y-1">
-          {sidebarTabs.map((tab) => (
-            <SidebarButton key={tab.id} tab={tab} active={activeTab === tab.id} onClick={() => handleTabChange(tab.id)} />
-          ))}
-        </nav>
+    <div className="min-h-screen bg-slate-950 text-slate-100">
+      {sidebarOpen ? (
         <button
-          onClick={() => { localStorage.clear(); navigate("/login"); }}
-          className="mt-6 flex items-center gap-3 rounded-xl border border-red-400/20 px-4 py-3 text-sm font-bold text-red-400 hover:bg-red-400/10 transition-colors"
-        >
-          <LogOut className="h-4 w-4" /> Logout
-        </button>
+          type="button"
+          aria-label="Close menu"
+          className="fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-[2px] transition-opacity lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      ) : null}
+
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col border-r border-slate-800/80 bg-slate-900 transition-transform duration-200 ease-out lg:z-30 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        }`}
+      >
+        <div className="flex h-full min-h-0 flex-col">
+          <BrandBlock
+            onLogoClick={() => navigate("/")}
+            onCloseMobile={() => setSidebarOpen(false)}
+          />
+          <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3" aria-label="Admin sections">
+            {sidebarTabs.map((tab) => (
+              <SidebarButton
+                key={tab.id}
+                tab={tab}
+                active={activeTab === tab.id}
+                onClick={() => selectTab(tab.id)}
+              />
+            ))}
+          </nav>
+          <div className="mt-auto border-t border-slate-800/80 p-3">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex w-full items-center gap-3 rounded-lg border border-slate-700/80 bg-slate-900 px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:border-red-500/30 hover:bg-red-950/20 hover:text-red-300"
+            >
+              <LogOut className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+              Logout
+            </button>
+          </div>
+        </div>
       </aside>
 
-      {/* MAIN */}
-      <div className="flex flex-1 flex-col min-w-0">
-        {/* TOPBAR */}
-        <div className="sticky top-0 z-30 border-b border-white/[0.08] bg-[#0a0b1a]/90 backdrop-blur-md">
-          <div className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center lg:justify-between lg:px-8">
-            <div>
-              <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-violet-400">
-                <Sparkles className="h-3.5 w-3.5" /> Admin Workspace
-              </p>
-              <h1 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">
-                {activeTab === "overview" ? "Command Center" : sidebarTabs.find((t) => t.id === activeTab)?.label}
-              </h1>
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col lg:pl-64">
+        <header className="sticky top-0 z-20 border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md">
+          <div className="flex flex-col gap-3 px-4 py-3 sm:px-6 sm:py-4 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
+            <div className="flex min-w-0 flex-1 items-start gap-3">
+              <button
+                type="button"
+                className="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-800 bg-slate-900 text-slate-300 transition hover:border-slate-700 hover:bg-slate-800 hover:text-white lg:hidden"
+                aria-label="Open menu"
+                aria-expanded={sidebarOpen}
+                onClick={() => setSidebarOpen(true)}
+              >
+                <Menu className="h-5 w-5" strokeWidth={1.75} />
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/")}
+                className="mt-0.5 shrink-0 rounded-lg py-0.5 outline-none ring-indigo-500/40 transition hover:bg-slate-900/80 focus-visible:ring-2 lg:hidden"
+                aria-label="Home"
+              >
+                <img src="/images/logo3.png" alt="" className="h-9 w-9 object-contain" />
+              </button>
+              <div className="min-w-0">
+                <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-indigo-400/90">
+                  <Sparkles className="h-3 w-3 shrink-0" />
+                  <span className="truncate">Admin workspace</span>
+                </p>
+                <h1 className="mt-0.5 truncate text-lg font-semibold tracking-tight text-white sm:text-xl lg:text-2xl">
+                  {activeTab === "overview" ? "Command center" : sidebarTabs.find((t) => t.id === activeTab)?.label}
+                </h1>
+              </div>
             </div>
 
             {activeTab === "overview" && (
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <div className="relative w-full sm:w-72">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+              <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:w-auto lg:max-w-xl">
+                <div className="relative w-full min-w-0 sm:min-w-[220px] sm:flex-1 lg:max-w-xs">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" strokeWidth={1.75} />
                   <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search pending providers..."
-                    className="w-full rounded-xl border border-white/[0.08] bg-[#12142a] py-2.5 pl-10 pr-4 text-sm text-white placeholder:text-slate-500 outline-none focus:border-violet-500/60 transition-colors"
+                    className="w-full rounded-lg border border-slate-700/80 bg-slate-900 py-2.5 pl-10 pr-3 text-sm text-white outline-none ring-indigo-500/30 placeholder:text-slate-500 transition focus:border-indigo-500/50 focus:ring-2"
                   />
                 </div>
-                <button
-                  onClick={() => fetchDashboardData({ silent: true })}
-                  className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-[#12142a] px-4 py-2.5 text-sm font-bold text-slate-300 hover:border-violet-500/40 hover:text-white transition-colors"
-                >
-                  <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} /> Refresh
-                </button>
-                <button className="rounded-xl border border-white/[0.08] bg-[#12142a] p-2.5 text-slate-400 hover:text-white transition-colors">
-                  <Bell className="h-5 w-5" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fetchDashboardData({ silent: true })}
+                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-slate-700/80 bg-slate-900 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:border-slate-600 hover:text-white sm:flex-none"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} strokeWidth={1.75} />
+                    Refresh
+                  </button>
+                  <button
+                    type="button"
+                    className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-700/80 bg-slate-900 text-slate-400 transition hover:border-slate-600 hover:text-slate-100"
+                    aria-label="Notifications"
+                  >
+                    <Bell className="h-[18px] w-[18px]" strokeWidth={1.75} />
+                  </button>
+                </div>
               </div>
             )}
           </div>
+        </header>
 
-          {/* Mobile tabs */}
-          <div className="flex gap-2 overflow-x-auto px-4 pb-4 lg:hidden">
-            {sidebarTabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => handleTabChange(tab.id)}
-                className={`shrink-0 rounded-xl px-4 py-2 text-sm font-bold transition-colors ${
-                  activeTab === tab.id ? "bg-violet-600 text-white" : "bg-[#12142a] text-slate-400"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* PAGE CONTENT */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           {activeTab === "overview" && (
             <OverviewPanel
               cards={cards} error={error}
               filteredQueue={filteredQueue} pendingQueue={pendingQueue}
               bookingStats={bookingStats}
-              onOpenTab={handleTabChange}
+              onOpenTab={selectTab}
               onApprove={(id) => handleProviderAction(id, "approve")}
               onReject={(id) => handleProviderAction(id, "reject")}
             />
@@ -210,7 +260,7 @@ export default function AdminDashboard() {
           {!["overview", "users-providers", "bookings", "add-service"].includes(activeTab) && (
             <ComingSoon activeTab={activeTab} />
           )}
-        </div>
+        </main>
       </div>
     </div>
   );
@@ -218,16 +268,36 @@ export default function AdminDashboard() {
 
 /* ── REUSABLE COMPONENTS ─────────────────────────────────────── */
 
-function BrandBlock() {
+function BrandBlock({ onLogoClick, onCloseMobile }) {
   return (
-    <div className="mb-8 flex items-center gap-3">
-      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-violet-400 text-white shadow-lg shadow-violet-500/30">
-        <ShieldCheck className="h-5 w-5" />
-      </div>
-      <div>
-        <p className="text-base font-black tracking-tight">Admin PRO</p>
-        <p className="text-xs text-slate-500">Local Service Finder</p>
-      </div>
+    <div className="flex items-center justify-between gap-2 border-b border-slate-800/80 px-4 py-4">
+      <button
+        type="button"
+        onClick={onLogoClick}
+        className="flex min-w-0 flex-1 items-center gap-3 rounded-lg text-left outline-none ring-indigo-500/40 transition hover:bg-slate-800/50 focus-visible:ring-2"
+      >
+        <img
+          src="/images/logo3.png"
+          alt="LocalServe"
+          className="h-9 w-9 shrink-0 object-contain"
+        />
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold tracking-tight text-white">
+            Local<span className="text-indigo-400">Serve</span>
+          </p>
+          <p className="text-xs text-slate-500">Admin</p>
+        </div>
+      </button>
+      {onCloseMobile ? (
+        <button
+          type="button"
+          className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-800 hover:text-white lg:hidden"
+          aria-label="Close sidebar"
+          onClick={onCloseMobile}
+        >
+          <X className="h-5 w-5" strokeWidth={1.75} />
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -236,28 +306,30 @@ function SidebarButton({ tab, active, onClick }) {
   const Icon = tab.icon;
   return (
     <button
+      type="button"
       onClick={onClick}
-      className={`w-full rounded-xl px-4 py-2.5 text-left text-sm font-bold transition-all ${
+      className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
         active
-          ? "bg-gradient-to-r from-violet-600 to-violet-500 text-white shadow-md shadow-violet-500/30"
-          : "text-slate-400 hover:bg-violet-500/10 hover:text-white"
+          ? "bg-slate-800 text-white shadow-sm"
+          : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-100"
       }`}
     >
-      <span className="flex items-center justify-between gap-3">
-        <span className="flex items-center gap-3">
-          <Icon className="h-4 w-4" /> {tab.label}
-        </span>
-        {tab.count && (
-          <span className="rounded bg-red-500 px-2 py-0.5 text-xs font-black text-white">{tab.count}</span>
-        )}
+      <span className="flex min-w-0 items-center gap-3">
+        <Icon className="h-4 w-4 shrink-0 opacity-90" strokeWidth={1.75} />
+        <span className="truncate">{tab.label}</span>
       </span>
+      {tab.count ? (
+        <span className="shrink-0 rounded-md bg-red-500/90 px-2 py-0.5 text-[10px] font-semibold text-white">
+          {tab.count}
+        </span>
+      ) : null}
     </button>
   );
 }
 
 function OverviewPanel({ cards, error, filteredQueue, pendingQueue, bookingStats, onOpenTab, onApprove, onReject }) {
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-7xl space-y-5 sm:space-y-6">
       <style>{`
         @keyframes fadeInUp {
           from { opacity: 0; transform: translateY(16px); }
@@ -276,23 +348,23 @@ function OverviewPanel({ cards, error, filteredQueue, pendingQueue, bookingStats
       `}</style>
 
       {error && (
-        <div className="rounded-xl border border-red-400/20 bg-red-500/10 p-4 text-sm text-red-300 animate-fadeInUp">{error}</div>
+        <div className="animate-fadeInUp rounded-xl border border-red-500/30 bg-red-950/40 p-4 text-sm text-red-200">{error}</div>
       )}
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 animate-fadeInUp" style={{ animationDelay: '0.08s' }}>
+      <section className="grid animate-fadeInUp gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4" style={{ animationDelay: '0.08s' }}>
         {cards.map((card) => (
           <StatCard key={card.label} {...card} onClick={card.tab ? () => onOpenTab(card.tab) : undefined} />
         ))}
       </section>
 
       {/* Charts Section */}
-      <section className="grid gap-4 sm:grid-cols-2 animate-fadeInUp" style={{ animationDelay: '0.18s' }}>
+      <section className="grid animate-fadeInUp gap-3 sm:grid-cols-2 sm:gap-4" style={{ animationDelay: '0.18s' }}>
         <StatusDonutChart stats={bookingStats?.statusCounts} total={bookingStats?.totalBookings} />
         <PaymentModeChart data={bookingStats?.paymentDistribution} />
         <MonthlyBarChart data={bookingStats?.monthlyBookings} />
         <CategoryDistributionChart pendingQueue={pendingQueue} />
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1fr_340px] animate-fadeInUp" style={{ animationDelay: '0.28s' }}>
+      <section className="grid animate-fadeInUp gap-5 xl:grid-cols-[1fr_minmax(0,340px)] xl:gap-6" style={{ animationDelay: '0.28s' }}>
         <PendingProvidersTable filteredQueue={filteredQueue} pendingQueue={pendingQueue} onApprove={onApprove} onReject={onReject} />
         <ReviewSummary pendingQueue={pendingQueue} />
       </section>
@@ -306,42 +378,44 @@ function StatCard({ label, value, icon, tone, bg, hint, onClick }) {
     <Tag
       type={onClick ? "button" : undefined}
       onClick={onClick}
-      className={`w-full rounded-2xl border border-white/[0.08] bg-[#12142a] p-5 text-left stat-card-hover ${
-        onClick ? "cursor-pointer hover:border-violet-500/40 hover:bg-[#15172f]" : ""
+      className={`stat-card-hover w-full rounded-xl border border-slate-800/80 bg-slate-900/40 p-4 text-left sm:rounded-2xl sm:p-5 ${
+        onClick ? "cursor-pointer hover:border-indigo-500/40 hover:bg-slate-800/50" : ""
       }`}
     >
-      <div className={`mb-4 w-fit rounded-xl p-3 ${bg} ${tone}`}>
-        {React.createElement(icon, { className: "h-5 w-5" })}
+      <div className={`mb-3 w-fit rounded-lg p-2.5 sm:mb-4 sm:rounded-xl sm:p-3 ${bg} ${tone}`}>
+        {React.createElement(icon, { className: "h-5 w-5", strokeWidth: 1.75 })}
       </div>
-      <h2 className="text-3xl font-black tracking-tight">{value}</h2>
-      <p className="mt-1 text-sm font-bold text-slate-300">{label}</p>
-      <p className="mt-1 text-xs text-slate-500">{hint}</p>
+      <h2 className="text-2xl font-semibold tabular-nums tracking-tight text-white sm:text-3xl">{value}</h2>
+      <p className="mt-1 text-sm font-medium text-slate-300">{label}</p>
+      <p className="mt-0.5 text-xs text-slate-500">{hint}</p>
     </Tag>
   );
 }
 
 function PendingProvidersTable({ filteredQueue, pendingQueue, onApprove, onReject }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#12142a]">
-      <div className="flex flex-col gap-2 border-b border-white/[0.08] p-5 sm:flex-row sm:items-center sm:justify-between">
+    <div className="overflow-hidden rounded-xl border border-slate-800/80 bg-slate-900/40 sm:rounded-2xl">
+      <div className="flex flex-col gap-2 border-b border-slate-800/80 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
         <div>
-          <h2 className="text-base font-black">Pending Provider Approvals</h2>
-          <p className="text-xs text-slate-500">{filteredQueue.length} visible from {pendingQueue.length} total</p>
+          <h2 className="text-base font-semibold text-white">Pending provider approvals</h2>
+          <p className="mt-0.5 text-xs text-slate-500">
+            {filteredQueue.length} visible from {pendingQueue.length} total
+          </p>
         </div>
-        <span className="w-fit rounded-lg border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs font-black uppercase tracking-widest text-amber-300">
-          Review Queue
+        <span className="w-fit rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-1 text-[11px] font-medium uppercase tracking-wider text-amber-200">
+          Review queue
         </span>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[760px] text-left">
-          <thead className="border-b border-white/[0.08] text-xs uppercase tracking-widest text-slate-500">
+          <thead className="border-b border-slate-800/80 text-xs font-medium uppercase tracking-wider text-slate-500">
             <tr>
               {["Provider", "Service", "Docs", "Location", "Actions"].map((h, i) => (
                 <th key={h} className={`px-5 py-4 ${i === 4 ? "text-right" : ""}`}>{h}</th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/[0.08]">
+          <tbody className="divide-y divide-slate-800/80">
             {filteredQueue.length > 0 ? (
               filteredQueue.map((item) => (
                 <ProviderRow key={item.id} item={item} onApprove={() => onApprove(item.id)} onReject={() => onReject(item.id)} />
@@ -371,7 +445,7 @@ function ProviderRow({ item, onApprove, onReject }) {
   };
 
   return (
-    <tr className="transition hover:bg-violet-500/5">
+    <tr className="transition hover:bg-slate-800/30">
       <td className="px-5 py-4">
         <div className="flex items-center gap-3">
           <img src={profileUrl} alt={item.name || "Provider"}
@@ -384,7 +458,7 @@ function ProviderRow({ item, onApprove, onReject }) {
         </div>
       </td>
       <td className="px-5 py-4">
-        <span className="rounded-lg border border-violet-500/25 bg-violet-500/15 px-3 py-1 text-xs font-bold text-violet-300">
+        <span className="rounded-lg border border-indigo-500/25 bg-indigo-500/10 px-3 py-1 text-xs font-medium text-indigo-300">
           {item.category || "General"}
         </span>
         {item.price_per_hour && <p className="mt-1.5 text-xs text-slate-500">₹{item.price_per_hour}/hr</p>}
@@ -392,7 +466,7 @@ function ProviderRow({ item, onApprove, onReject }) {
       <td className="px-5 py-4">
         {docPath ? (
           <a href={`${API_BASE_URL}/${docPath}`} target="_blank" rel="noreferrer"
-            className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-violet-500/40 hover:text-violet-300 transition-colors">
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-700/80 px-3 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:border-indigo-500/40 hover:text-indigo-300">
             <FileText className="h-3.5 w-3.5" /> View PDF
           </a>
         ) : (
@@ -407,12 +481,12 @@ function ProviderRow({ item, onApprove, onReject }) {
       </td>
       <td className="px-5 py-4">
         <div className="flex justify-end gap-2">
-          <button onClick={onApprove}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-black text-white hover:bg-emerald-400 transition-colors">
-            <CheckCircle className="h-3.5 w-3.5" /> Approve
+          <button type="button" onClick={onApprove}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-emerald-500">
+            <CheckCircle className="h-3.5 w-3.5" strokeWidth={1.75} /> Approve
           </button>
-          <button onClick={handleRejectClick}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-red-400/25 px-3 py-1.5 text-xs font-black text-red-400 hover:bg-red-500/10 transition-colors">
+          <button type="button" onClick={handleRejectClick}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 px-3 py-1.5 text-xs font-medium text-red-300 transition-colors hover:bg-red-950/40">
             <XCircle className="h-3.5 w-3.5" /> Reject
           </button>
         </div>
@@ -436,15 +510,15 @@ function ReviewSummary({ pendingQueue }) {
   ];
 
   return (
-    <aside className="rounded-2xl border border-white/[0.08] bg-[#12142a] p-5">
-      <h2 className="text-base font-black">Queue Health</h2>
+    <aside className="rounded-xl border border-slate-800/80 bg-slate-900/40 p-4 sm:rounded-2xl sm:p-5">
+      <h2 className="text-base font-semibold text-white">Queue health</h2>
       <p className="mt-1 text-xs text-slate-500">Services waiting for admin approval.</p>
       <div className="mt-5 space-y-2.5">
         {Object.keys(topServices).length > 0 ? (
           Object.entries(topServices).map(([service, count], i) => (
-            <div key={service} className={`flex items-center justify-between rounded-xl border p-3.5 ${colors[i % colors.length]}`}>
-              <span className="text-sm font-bold">{service}</span>
-              <span className="rounded bg-white/10 px-2 py-0.5 text-xs font-black text-white">{count}</span>
+            <div key={service} className={`flex items-center justify-between rounded-lg border p-3 sm:rounded-xl sm:p-3.5 ${colors[i % colors.length]}`}>
+              <span className="text-sm font-medium">{service}</span>
+              <span className="rounded-md bg-white/10 px-2 py-0.5 text-xs font-semibold text-white">{count}</span>
             </div>
           ))
         ) : (
@@ -461,22 +535,22 @@ function ReviewSummary({ pendingQueue }) {
 
 function ChartCard({ icon: Icon, title, subtitle, children, hasData }) {
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-[#12142a] p-5 flex flex-col">
-      <div className="flex items-center gap-2 mb-1">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/5 text-violet-400">
-          <Icon className="h-4 w-4" />
+    <div className="flex flex-col rounded-xl border border-slate-800/80 bg-slate-900/40 p-4 sm:rounded-2xl sm:p-5">
+      <div className="mb-1 flex items-center gap-2">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-800/60 bg-slate-950/50 text-indigo-400">
+          <Icon className="h-4 w-4" strokeWidth={1.75} />
         </div>
-        <div>
-          <h3 className="text-sm font-black text-white">{title}</h3>
-          {subtitle && <p className="text-[10px] text-slate-500">{subtitle}</p>}
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold text-white">{title}</h3>
+          {subtitle && <p className="text-[11px] text-slate-500">{subtitle}</p>}
         </div>
       </div>
       <div className="mt-3 flex-1">
         {hasData ? children : (
-          <div className="flex h-40 flex-col items-center justify-center text-center">
-            <BarChart3 className="h-8 w-8 text-slate-700 mb-2" />
-            <p className="text-xs text-slate-600 font-medium">No data available yet</p>
-            <p className="text-[10px] text-slate-700 mt-0.5">Data will appear once activity begins</p>
+          <div className="flex h-36 flex-col items-center justify-center text-center sm:h-40">
+            <BarChart3 className="mb-2 h-8 w-8 text-slate-600" strokeWidth={1.5} />
+            <p className="text-xs font-medium text-slate-500">No data available yet</p>
+            <p className="mt-0.5 text-[10px] text-slate-600">Data will appear once activity begins</p>
           </div>
         )}
       </div>
@@ -494,29 +568,29 @@ function StatusDonutChart({ stats, total }) {
   let offset = 0;
   const segments = hasData
     ? Object.entries(stats)
-        .filter(([, v]) => v > 0)
-        .map(([key, value]) => {
-          const dash = (value / total) * c;
-          const seg = { key, value, dash, offset, color: colors[key], label: labels[key] };
-          offset -= dash;
-          return seg;
-        })
+      .filter(([, v]) => v > 0)
+      .map(([key, value]) => {
+        const dash = (value / total) * c;
+        const seg = { key, value, dash, offset, color: colors[key], label: labels[key] };
+        offset -= dash;
+        return seg;
+      })
     : [];
 
   return (
     <ChartCard icon={PieChart} title="Booking Status" subtitle="Distribution by current state" hasData={hasData}>
-      <div className="flex items-center gap-5">
+      <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center">
         <div className="relative h-28 w-28 shrink-0">
           <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90">
-            <circle cx="60" cy="60" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="12" />
+            <circle cx="60" cy="60" r={r} fill="none" stroke="rgba(51,65,85,0.5)" strokeWidth="12" />
             {segments.map((s) => (
               <circle key={s.key} cx="60" cy="60" r={r} fill="none" stroke={s.color} strokeWidth="12"
                 strokeDasharray={`${s.dash} ${c}`} strokeDashoffset={s.offset} strokeLinecap="round" />
             ))}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <p className="text-lg font-black text-white">{total}</p>
-            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Bookings</p>
+            <p className="text-lg font-semibold tabular-nums text-white">{total}</p>
+            <p className="text-[9px] font-medium uppercase tracking-wider text-slate-500">Bookings</p>
           </div>
         </div>
         <div className="flex-1 space-y-2">
@@ -524,8 +598,8 @@ function StatusDonutChart({ stats, total }) {
             <div key={s.key} className="flex items-center gap-2">
               <div className="h-2.5 w-2.5 rounded-full" style={{ background: s.color }} />
               <span className="text-xs text-slate-400 flex-1">{s.label}</span>
-              <span className="text-xs font-bold text-white">{s.value}</span>
-              <span className="text-[10px] text-slate-500 w-8 text-right">{Math.round((s.value / total) * 100)}%</span>
+              <span className="text-xs font-semibold tabular-nums text-white">{s.value}</span>
+              <span className="w-8 text-right text-[10px] text-slate-500">{Math.round((s.value / total) * 100)}%</span>
             </div>
           ))}
         </div>
@@ -544,13 +618,13 @@ function MonthlyBarChart({ data }) {
           {data.map((d) => (
             <div key={d.month} className="flex items-center gap-3">
               <span className="w-10 text-[10px] font-bold uppercase tracking-wider text-slate-500">{d.month}</span>
-              <div className="flex-1 h-6 rounded-lg bg-white/5 overflow-hidden">
+              <div className="h-6 flex-1 overflow-hidden rounded-lg bg-slate-950/60">
                 <div
-                  className="h-full rounded-lg bg-gradient-to-r from-violet-600 to-violet-400 transition-all"
+                  className="h-full rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-400 transition-all"
                   style={{ width: `${max ? (d.count / max) * 100 : 0}%` }}
                 />
               </div>
-              <span className="w-5 text-xs font-bold text-white text-right">{d.count}</span>
+              <span className="w-5 text-right text-xs font-semibold tabular-nums text-white">{d.count}</span>
             </div>
           ))}
         </div>
@@ -574,10 +648,10 @@ function PaymentModeChart({ data }) {
           return (
             <div key={item.label}>
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-bold text-slate-300">{item.label}</span>
-                <span className="text-xs font-black text-white">{item.value} <span className="text-slate-500">({pct}%)</span></span>
+                <span className="text-xs font-medium text-slate-300">{item.label}</span>
+                <span className="text-xs font-semibold tabular-nums text-white">{item.value} <span className="font-normal text-slate-500">({pct}%)</span></span>
               </div>
-              <div className="h-3 rounded-full bg-white/5 overflow-hidden">
+              <div className="h-3 overflow-hidden rounded-full bg-slate-950/60">
                 <div
                   className="h-full rounded-full transition-all"
                   style={{ width: `${pct}%`, background: item.barColor }}
@@ -587,9 +661,9 @@ function PaymentModeChart({ data }) {
           );
         })}
       </div>
-      <div className="mt-5 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-center">
-        <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Total Transactions</p>
-        <p className="text-xl font-black text-white mt-0.5">{total}</p>
+      <div className="mt-4 rounded-lg border border-slate-800/60 bg-slate-950/40 p-3 text-center sm:mt-5">
+        <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Total transactions</p>
+        <p className="mt-0.5 text-xl font-semibold tabular-nums text-white">{total}</p>
       </div>
     </ChartCard>
   );
@@ -599,10 +673,10 @@ function CategoryDistributionChart({ pendingQueue }) {
   const hasData = pendingQueue && pendingQueue.length > 0;
   const counts = hasData
     ? pendingQueue.reduce((acc, item) => {
-        const cat = item.category || "General";
-        acc[cat] = (acc[cat] || 0) + 1;
-        return acc;
-      }, {})
+      const cat = item.category || "General";
+      acc[cat] = (acc[cat] || 0) + 1;
+      return acc;
+    }, {})
     : {};
   const chartData = Object.entries(counts)
     .map(([category, count]) => ({ category, count }))
@@ -616,10 +690,10 @@ function CategoryDistributionChart({ pendingQueue }) {
         {chartData.map((d, i) => (
           <div key={d.category}>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-bold text-slate-300">{d.category}</span>
-              <span className="text-xs font-black text-white">{d.count}</span>
+              <span className="text-xs font-medium text-slate-300">{d.category}</span>
+              <span className="text-xs font-semibold tabular-nums text-white">{d.count}</span>
             </div>
-            <div className="h-2.5 rounded-full bg-white/5 overflow-hidden">
+            <div className="h-2.5 overflow-hidden rounded-full bg-slate-950/60">
               <div
                 className="h-full rounded-full transition-all"
                 style={{ width: `${max ? (d.count / max) * 100 : 0}%`, background: barColors[i % barColors.length] }}
@@ -634,11 +708,11 @@ function CategoryDistributionChart({ pendingQueue }) {
 
 function ComingSoon({ activeTab }) {
   return (
-    <div className="flex min-h-[55vh] items-center justify-center rounded-2xl border border-dashed border-violet-500/20 bg-[#12142a] p-6 text-center">
+    <div className="flex min-h-[50vh] items-center justify-center rounded-2xl border border-dashed border-slate-700/80 bg-slate-900/30 p-6 text-center sm:min-h-[55vh]">
       <div>
-        <p className="text-xs font-black uppercase tracking-widest text-violet-400">Coming Soon</p>
-        <h2 className="mt-3 text-2xl font-black capitalize">{activeTab}</h2>
-        <p className="mt-2 max-w-md text-sm text-slate-500">This section is ready for the next backend screen.</p>
+        <p className="text-[11px] font-medium uppercase tracking-wider text-indigo-400/90">Coming soon</p>
+        <h2 className="mt-2 text-xl font-semibold capitalize text-white sm:text-2xl">{activeTab}</h2>
+        <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">This section is ready for the next backend screen.</p>
       </div>
     </div>
   );
@@ -646,14 +720,18 @@ function ComingSoon({ activeTab }) {
 
 function LoadingScreen() {
   return (
-    <div className="flex h-screen flex-col items-center justify-center gap-4 bg-[#0a0b1a]">
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-violet-400 shadow-lg shadow-violet-500/30">
-        <Loader2 className="animate-spin text-white" size={22} />
+    <div className="flex h-screen flex-col items-center justify-center gap-4 bg-slate-950 px-6">
+      <img src="/images/logo3.png" alt="" className="h-10 w-10 object-contain opacity-90" />
+      <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-800 bg-slate-900">
+        <Loader2 className="animate-spin text-indigo-400" size={20} strokeWidth={1.75} />
       </div>
-      <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Loading admin dashboard</p>
+      <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Loading admin dashboard</p>
     </div>
   );
 }
+
+
+
 
 // import React, { useState, useEffect } from "react";
 // import { useNavigate } from "react-router-dom";

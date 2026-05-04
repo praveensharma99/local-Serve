@@ -14,7 +14,7 @@ router.get('/profile', authMiddleware, async (req, res) => {
         });
 
         if (!profile) {
-            return res.status(404).json({ success: false, message: "Profile not found!" });
+            return res.json({ success: true, profileExists: false, message: "Profile not found, please complete onboarding." });
         }
 
         res.json({

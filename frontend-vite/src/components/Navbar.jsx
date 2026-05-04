@@ -5,273 +5,111 @@ export default function Navbar({ scrolled }) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // ✅ Scroll function (clean & working)
   const scrollToSection = (id) => {
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
+    if (id === "home") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } else {
-      console.log("Section not found:", id);
+      const element = document.getElementById(id);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
     }
+    setMenuOpen(false);
   };
 
   return (
     <>
-      {/* Styles */}
-      <style>{`
-        .nav-link:hover { color: #A5B4FC !important; }
-        .nav-link { transition: color 0.2s; }
-
-        .btn-primary:hover { 
-          transform: translateY(-2px); 
-          box-shadow: 0 16px 40px rgba(99,102,241,0.45); 
-        }
-        .btn-primary { transition: all 0.25s ease; }
-
-        .btn-secondary:hover { 
-          background: rgba(255,255,255,0.12) !important; 
-          transform: translateY(-1px); 
-        }
-        .btn-secondary { transition: all 0.25s ease; }
-
-        .shimmer-btn { 
-          background: linear-gradient(90deg, #6366f1, #818cf8, #6366f1); 
-          background-size: 200% auto; 
-          animation: shimmer 2.5s linear infinite; 
-        }
-
-        @keyframes shimmer { 
-          0% { background-position: -200% 0; } 
-          100% { background-position: 200% 0; } 
-        }
-
-        /* ✅ FIX: navbar overlap issue */
-        section {
-          scroll-margin-top: 80px;
-        }
-      `}</style>
-
       <nav
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 100,
-          padding: "0 5vw",
-          background: scrolled ? "rgba(2,8,24,0.9)" : "transparent",
-          backdropFilter: scrolled ? "blur(20px)" : "none",
-          borderBottom: scrolled
-            ? "1px solid rgba(255,255,255,0.06)"
-            : "none",
-          transition: "all 0.4s ease",
-          height: 72,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
+        className={`fixed top-0 left-0 w-full z-[1000] transition-all duration-300 px-[5vw] flex items-center justify-between
+        ${scrolled 
+          ? "h-20 bg-[#020818]/95 backdrop-blur-md border-b border-white/10 shadow-2xl" 
+          : "h-24 bg-gradient-to-b from-black/70 to-transparent"
+        }`}
       >
-        {/* Logo */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 10,
-              background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 18,
-            }}
-          >
-            🔧
-          </div>
-
-          <span
-            style={{
-              fontSize: 20,
-              fontWeight: 700,
-              color: "#fff",
-            }}
-          >
-            Local<span style={{ color: "#818cf8" }}>Serve</span>
+        {/* --- LOGO --- */}
+        <div 
+          onClick={() => scrollToSection("home")}
+          className="flex items-center gap-0.5 cursor-pointer group"
+        >
+          <img
+            src="/images/logo3.png"
+            alt="LocalServe logo"
+            className="w-20 h-20 object-contain drop-shadow-[0_0_14px_rgba(99,102,241,0.4)] group-hover:scale-105 transition-transform"
+          />
+          <span className="hidden sm:inline -ml-1 text-2xl font-extrabold text-white tracking-tight">
+            Local<span className="text-indigo-400">Serve</span>
           </span>
         </div>
 
-        {/* Links - Desktop */}
-        <div style={{ display: "flex", gap: 36, alignItems: "center" }} className="hidden lg:flex">
-          {["Services", "How it Works", "Reviews", "Pricing"].map((l) => {
-            const sectionId = l.toLowerCase().replace(/\s+/g, "-");
-
-            return (
-              <span
-                key={l}
-                className="nav-link"
-                onClick={() => scrollToSection(sectionId)}
-                style={{
-                  fontSize: 14,
-                  color: "rgba(255,255,255,0.6)",
-                  cursor: "pointer",
-                  fontWeight: 500,
-                }}
-              >
-                {l}
-              </span>
-            );
-          })}
+        {/* --- DESKTOP LINKS --- */}
+        <div className="hidden lg:flex items-center gap-8">
+          {["Home", "Services", "How it Works", "Pricing"].map((l) => (
+            <button
+              key={l}
+              onClick={() => scrollToSection(l.toLowerCase().replace(/\s+/g, "-"))}
+              className="text-sm font-medium text-gray-400 hover:text-white transition-colors duration-200"
+            >
+              {l}
+            </button>
+          ))}
         </div>
 
-        {/* Buttons - Desktop */}
-        <div style={{ display: "flex", gap: 12 }} className="hidden lg:flex">
+        {/* --- DESKTOP BUTTONS --- */}
+        <div className="hidden lg:flex items-center gap-4">
           <button
             onClick={() => navigate("/login")}
-            className="btn-secondary"
-            style={{
-              padding: "9px 22px",
-              borderRadius: 10,
-              border: "1px solid rgba(255,255,255,0.15)",
-              background: "transparent",
-              color: "#fff",
-              cursor: "pointer",
-            }}
+            className="px-5 py-2 text-sm font-medium text-white border border-white/20 rounded-lg hover:bg-white/10 transition-all shadow-sm"
           >
             Sign In
           </button>
-
           <button
             onClick={() => navigate("/register")}
-            className="shimmer-btn btn-primary"
-            style={{
-              padding: "9px 22px",
-              borderRadius: 10,
-              border: "none",
-              color: "#fff",
-              cursor: "pointer",
-            }}
+            className="px-5 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-500 hover:-translate-y-0.5 transition-all shadow-[0_0_20px_rgba(99,102,241,0.4)]"
           >
             Get Started →
           </button>
         </div>
 
-        {/* Mobile Menu Toggle */}
+        {/* --- MOBILE TOGGLE --- */}
         <button 
           onClick={() => setMenuOpen(!menuOpen)}
-          className="lg:hidden"
-          style={{
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            padding: "8px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "5px"
-          }}
+          className="lg:hidden p-2 text-white z-[1100]"
         >
-          <span style={{
-            width: "24px",
-            height: "2px",
-            background: "#fff",
-            transition: "all 0.3s ease",
-            transform: menuOpen ? "rotate(45deg) translateY(7px)" : "none"
-          }} />
-          <span style={{
-            width: "24px",
-            height: "2px",
-            background: "#fff",
-            transition: "all 0.3s ease",
-            opacity: menuOpen ? 0 : 1
-          }} />
-          <span style={{
-            width: "24px",
-            height: "2px",
-            background: "#fff",
-            transition: "all 0.3s ease",
-            transform: menuOpen ? "rotate(-45deg) translateY(-7px)" : "none"
-          }} />
+          <div className="w-6 h-0.5 bg-current mb-1.5 transition-all duration-300" 
+               style={{ transform: menuOpen ? "rotate(45deg) translateY(8px)" : "" }} />
+          <div className="w-6 h-0.5 bg-current mb-1.5 transition-all duration-300" 
+               style={{ opacity: menuOpen ? 0 : 1 }} />
+          <div className="w-6 h-0.5 bg-current transition-all duration-300" 
+               style={{ transform: menuOpen ? "rotate(-45deg) translateY(-8px)" : "" }} />
         </button>
       </nav>
 
-      {/* Mobile Menu */}
-      <div style={{
-        position: "fixed",
-        top: "72px",
-        left: 0,
-        right: 0,
-        background: "rgba(2,8,24,0.98)",
-        backdropFilter: "blur(20px)",
-        borderBottom: "1px solid rgba(255,255,255,0.06)",
-        padding: menuOpen ? "24px 5vw" : "0",
-        maxHeight: menuOpen ? "500px" : "0",
-        overflow: "hidden",
-        transition: "all 0.3s ease",
-        zIndex: 99
-      }} className="lg:hidden">
-        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-          {["Services", "How it Works", "Reviews", "Pricing"].map((l) => {
-            const sectionId = l.toLowerCase().replace(/\s+/g, "-");
-            return (
-              <span
-                key={l}
-                onClick={() => {
-                  scrollToSection(sectionId);
-                  setMenuOpen(false);
-                }}
-                style={{
-                  fontSize: 16,
-                  color: "rgba(255,255,255,0.7)",
-                  cursor: "pointer",
-                  fontWeight: 500,
-                  padding: "8px 0",
-                  borderBottom: "1px solid rgba(255,255,255,0.05)"
-                }}
-              >
-                {l}
-              </span>
-            );
-          })}
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "12px" }}>
-            <button
-              onClick={() => {
-                navigate("/login");
-                setMenuOpen(false);
-              }}
-              className="btn-secondary"
-              style={{
-                padding: "12px 22px",
-                borderRadius: 10,
-                border: "1px solid rgba(255,255,255,0.15)",
-                background: "transparent",
-                color: "#fff",
-                cursor: "pointer",
-                fontSize: 15,
-                fontWeight: 500
-              }}
-            >
-              Sign In
-            </button>
-            <button
-              onClick={() => {
-                navigate("/register");
-                setMenuOpen(false);
-              }}
-              className="shimmer-btn btn-primary"
-              style={{
-                padding: "12px 22px",
-                borderRadius: 10,
-                border: "none",
-                color: "#fff",
-                cursor: "pointer",
-                fontSize: 15,
-                fontWeight: 600
-              }}
-            >
-              Get Started →
-            </button>
-          </div>
+      {/* --- MOBILE MENU OVERLAY --- */}
+      <div className={`fixed inset-0 bg-[#020818] z-[900] flex flex-col items-center justify-center gap-8 transition-transform duration-500 lg:hidden
+        ${menuOpen ? "translate-y-0" : "-translate-y-full"}`}
+      >
+        {["Home", "Services", "How it Works", "Pricing"].map((l) => (
+          <button
+            key={l}
+            onClick={() => scrollToSection(l.toLowerCase().replace(/\s+/g, "-"))}
+            className="text-2xl font-bold text-white hover:text-indigo-400 transition-colors"
+          >
+            {l}
+          </button>
+        ))}
+        <div className="flex flex-col gap-4 w-[80%] mt-4">
+          <button 
+            onClick={() => { navigate("/login"); setMenuOpen(false); }}
+            className="w-full py-4 rounded-xl border border-white/10 text-white font-medium"
+          >
+            Sign In
+          </button>
+          <button 
+            onClick={() => { navigate("/register"); setMenuOpen(false); }}
+            className="w-full py-4 rounded-xl bg-indigo-600 text-white font-bold shadow-xl"
+          >
+            Get Started
+          </button>
         </div>
       </div>
     </>

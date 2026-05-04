@@ -19,6 +19,7 @@ import { toast } from "react-toastify";
 import { io } from "socket.io-client";
 import ChatDrawer from "../../components/ChatDrawer";
 import { API_BASE_URL } from "../../config/api";
+import { loadRazorpayCheckout } from "../../utils/loadRazorpayCheckout";
 
 export default function UserBookings() {
   const [bookings, setBookings] = useState([]);
@@ -115,6 +116,12 @@ export default function UserBookings() {
 
       if (!orderData.success) {
         toast.error(orderData.message || "Failed to create payment order");
+        return;
+      }
+
+      const rzpLoaded = await loadRazorpayCheckout();
+      if (!rzpLoaded) {
+        toast.error("Razorpay checkout could not load. Please try again.");
         return;
       }
 

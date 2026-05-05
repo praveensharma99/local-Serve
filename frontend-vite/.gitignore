@@ -47,3 +47,6 @@ build/
 *.temp
 tmp/
 temp/
+
+.vercel
+.env*.local

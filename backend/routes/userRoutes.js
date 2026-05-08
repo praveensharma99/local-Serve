@@ -6,6 +6,21 @@ const Service = require('../models/ServiceModel');
 const authMiddleware = require('../middleware/authMiddleware');
 const { Op, fn, col, where } = require('sequelize');
 
+// Public route to get all active services for home page
+router.get('/services', async (req, res) => {
+    try {
+        const services = await Service.findAll({
+            where: {
+                [Op.or]: [{ isActive: true }, { isActive: null }]
+            },
+            order: [['createdAt', 'DESC']]
+        });
+        res.json({ success: true, services });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // User ki profile fetch karne ka route
 router.get('/profile', authMiddleware, async (req, res) => {
     try {
@@ -24,18 +39,18 @@ router.get('/profile', authMiddleware, async (req, res) => {
     }
 });
 
-// Selected service aur user city ke hisaab se approved providers fetch karo
-router.get('/providers', authMiddleware, async (req, res) => {
+// Selected service ke hisaab se approved providers fetch karo, city optional hai
+router.get('/providers', async (req, res) => {
     try {
         const category = (req.query.category || '').trim().toLowerCase();
         const categoryFirstWord = category.split(/\s+/)[0];
         const categoryMatches = [...new Set([category, categoryFirstWord].filter(Boolean))];
         const city = (req.query.city || '').trim().toLowerCase();
 
-        if (!category || !city || city === 'undefined' || city === 'null') {
+        if (!category) {
             return res.status(400).json({
                 success: false,
-                message: 'Category aur city required hai'
+                message: 'Category required hai'
             });
         }
 
@@ -54,6 +69,16 @@ router.get('/providers', authMiddleware, async (req, res) => {
             return res.json({ success: true, providers: [] });
         }
 
+        const userInclude = {
+            model: User,
+            as: 'user',
+            attributes: ['name', 'email', 'city', 'state']
+        };
+
+        if (city && city !== 'undefined' && city !== 'null') {
+            userInclude.where = where(fn('LOWER', fn('TRIM', col('user.city'))), city);
+        }
+
         const providers = await ProviderProfile.findAll({
             where: {
                 status: 'approved',
@@ -61,12 +86,7 @@ router.get('/providers', authMiddleware, async (req, res) => {
                     where(fn('LOWER', fn('TRIM', col('category'))), { [Op.in]: categoryMatches })
                 ]
             },
-            include: [{
-                model: User,
-                as: 'user',
-                attributes: ['name', 'email', 'city', 'state'],
-                where: where(fn('LOWER', fn('TRIM', col('user.city'))), city)
-            }],
+            include: [userInclude],
             order: [['updatedAt', 'DESC']]
         });
 

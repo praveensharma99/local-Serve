@@ -23,10 +23,10 @@ export default function ServiceProviders() {
     const fetchProviders = async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await fetch(
-          `${API_BASE_URL}/api/user/providers?category=${encodeURIComponent(decodedCategory)}&city=${encodeURIComponent(decodedCity)}`,
-          { headers: { Authorization: `Bearer ${token}` } },
-        );
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const url = `${API_BASE_URL}/api/user/providers?category=${encodeURIComponent(decodedCategory)}${decodedCity ? `&city=${encodeURIComponent(decodedCity)}` : ''}`;
+        
+        const res = await fetch(url, { headers });
         const data = await res.json();
         if (data.success) setProviders(data.providers);
         else setProviders([]);
@@ -37,7 +37,7 @@ export default function ServiceProviders() {
       }
     };
 
-    if (decodedCategory && decodedCity) fetchProviders();
+    if (decodedCategory) fetchProviders();
     else setLoading(false);
   }, [decodedCategory, decodedCity]);
 
@@ -64,7 +64,7 @@ export default function ServiceProviders() {
           </h1>
           <p className="text-slate-500 flex items-center gap-1 font-bold text-xs uppercase tracking-widest">
             <MapPin size={14} className="text-indigo-500" /> Available in{" "}
-            {decodedCity || "your city"}
+            {decodedCity || "All Cities"}
           </p>
         </div>
       </div>
@@ -91,7 +91,7 @@ export default function ServiceProviders() {
                       src={
                         profilePic
                           ? `${API_BASE_URL}/${profilePic}`
-                          : `https://ui-avatars.com/api/?name=${encodeURIComponent(pro.User?.name || "Provider")}`
+                          : `https://ui-avatars.com/api/?name=${encodeURIComponent(pro.user?.name || pro.User?.name || "Provider")}`
                       }
                       alt=""
                       className="w-full h-full object-cover"
@@ -99,13 +99,17 @@ export default function ServiceProviders() {
                   </div>
                   <div className="flex-1">
                     <h3 className="text-xl font-bold text-white mb-1">
-                      {pro.User?.name || "Provider"}
+                      {pro.user?.name || pro.User?.name || "Provider"}
                     </h3>
                     <p className="text-indigo-400 font-black text-xs uppercase tracking-tighter flex items-center gap-1">
                       <Star size={14} fill="currentColor" /> 4.9 (85 Reviews)
                     </p>
                     <p className="text-slate-500 text-sm mt-2">
                       {experience} Years Experience
+                    </p>
+                    <p className="text-slate-400 text-sm mt-1 flex items-center gap-1">
+                      <MapPin size={14} className="text-indigo-400" />
+                      {pro.user?.city ? pro.user.city : "Unknown"}{pro.user?.state ? `, ${pro.user.state}` : ""}
                     </p>
                   </div>
                 </div>
@@ -129,8 +133,13 @@ export default function ServiceProviders() {
 
                 <button
                   onClick={() => {
-                    setSelectedProvider(pro); // 'provider' wo object hai jo loop (map) se mil raha hai
-                    setIsModalOpen(true);
+                    const token = localStorage.getItem("token");
+                    if (!token) {
+                      navigate("/login");
+                    } else {
+                      setSelectedProvider(pro);
+                      setIsModalOpen(true);
+                    }
                   }}
                   className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black transition-all shadow-lg shadow-indigo-600/20"
                 >
@@ -141,8 +150,7 @@ export default function ServiceProviders() {
           })
         ) : (
           <div className="col-span-full py-20 text-center text-slate-500 font-bold border border-dashed border-white/10 rounded-[3rem]">
-            Sorry, no {decodedCategory} found in {decodedCity || "your city"}{" "}
-            yet.
+            Sorry, no {decodedCategory} found {decodedCity ? `in ${decodedCity}` : "yet"}.
           </div>
         )}
       </div>

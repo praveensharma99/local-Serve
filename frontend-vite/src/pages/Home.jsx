@@ -5,6 +5,7 @@ import HowItWorks from "../components/HowItWorks";
 import Reviews from "../components/Reviews";
 import Stats from "../components/Stats";
 import Footer from "../components/Footer";
+import ParticleBackground from "../components/ParticleBackground";
 
 export default function Home() {
   return (
@@ -12,7 +13,8 @@ export default function Home() {
        Yahan maine 'w-full' aur 'overflow-x-hidden' add kiya hai. 
        Ye side waali white space (horizontal scroll) ko block kar dega.
     */
-    <div className="min-h-screen w-full overflow-x-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950">
+    <div className="min-h-screen w-full overflow-x-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 relative">
+      <ParticleBackground />
       <Navbar />
       
       {/* 
@@ -20,7 +22,7 @@ export default function Home() {
           screen se bahar nikalte hain, isliye content ko ek 
           relative container mein wrap karna safe rehta hai.
       */}
-      <main className="w-full">
+      <main className="w-full relative z-10">
         <Hero />
         <Stats />
         <Services />

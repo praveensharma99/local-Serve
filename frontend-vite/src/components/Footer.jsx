@@ -1,18 +1,45 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../config/api";
 
 export default function Footer() {
+  const navigate = useNavigate();
+  const [dynamicServices, setDynamicServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/api/categories/footer`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          // Extract only the top 6 categories or all of them
+          setDynamicServices(data.categories.slice(0, 8));
+        }
+      })
+      .catch((err) => console.error("Error fetching footer services:", err))
+      .finally(() => setLoading(false));
+  }, []);
+
   const footerData = [
     { 
-      title: "Services", 
-      links: ["Plumbing", "Electrical", "Carpentry", "Cleaning", "Painting", "AC Repair"] 
-    },
-    { 
       title: "Company", 
-      links: ["About Us", "Careers", "Blog", "Press", "Partners"] 
+      links: [
+        { name: "About Us", action: () => {} }, 
+        { name: "Careers", action: () => {} }, 
+        { name: "Blog", action: () => {} }, 
+        { name: "Press", action: () => {} }, 
+        { name: "Partners", action: () => {} }
+      ] 
     },
     { 
       title: "Support", 
-      links: ["Help Center", "Safety", "Terms", "Privacy", "Contact Us"] 
+      links: [
+        { name: "Help Center", action: () => {} }, 
+        { name: "Safety", action: () => {} }, 
+        { name: "Terms", action: () => {} }, 
+        { name: "Privacy", action: () => {} }, 
+        { name: "Contact Us", action: () => {} }
+      ] 
     },
   ];
 
@@ -50,7 +77,31 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Links Sections - Mobile par 2-column grid mein aayenge */}
+        {/* Dynamic Services Section */}
+        <div className="flex flex-col items-center lg:items-start text-center lg:text-left">
+          <h4 className="text-[11px] font-bold text-white/30 tracking-[0.15em] uppercase mb-6">
+            Services
+          </h4>
+          <div className="flex flex-col gap-3">
+            {loading ? (
+              <div className="text-sm text-white/20">Loading...</div>
+            ) : dynamicServices.length > 0 ? (
+              dynamicServices.map((service) => (
+                <div 
+                  key={service.slug} 
+                  onClick={() => navigate(`/services/${service.slug}`)}
+                  className="text-sm text-white/50 cursor-pointer transition-colors duration-200 hover:text-indigo-400"
+                >
+                  {service.name}
+                </div>
+              ))
+            ) : (
+              <div className="text-sm text-white/50">No services found</div>
+            )}
+          </div>
+        </div>
+
+        {/* Static Links Sections */}
         {footerData.map(col => (
           <div key={col.title} className="flex flex-col items-center lg:items-start text-center lg:text-left">
             <h4 className="text-[11px] font-bold text-white/30 tracking-[0.15em] uppercase mb-6">
@@ -59,10 +110,11 @@ export default function Footer() {
             <div className="flex flex-col gap-3">
               {col.links.map(l => (
                 <div 
-                  key={l} 
+                  key={l.name} 
+                  onClick={l.action}
                   className="text-sm text-white/50 cursor-pointer transition-colors duration-200 hover:text-indigo-400"
                 >
-                  {l}
+                  {l.name}
                 </div>
               ))}
             </div>

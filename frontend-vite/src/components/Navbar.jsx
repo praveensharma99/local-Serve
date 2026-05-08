@@ -22,8 +22,8 @@ export default function Navbar({ scrolled }) {
       <nav
         className={`fixed top-0 left-0 w-full z-[1000] transition-all duration-300 px-[5vw] flex items-center justify-between
         ${scrolled 
-          ? "h-20 bg-[#020818]/95 backdrop-blur-md border-b border-white/10 shadow-2xl" 
-          : "h-24 bg-gradient-to-b from-black/70 to-transparent"
+          ? "h-20 bg-[#050816]/60 backdrop-blur-xl border-b border-cyan-500/10 shadow-[0_8px_32px_rgba(0,0,0,0.35)]" 
+          : "h-24 bg-gradient-to-b from-[#050816]/80 to-transparent backdrop-blur-sm border-b border-transparent shadow-none"
         }`}
       >
         {/* --- LOGO --- */}
@@ -34,7 +34,7 @@ export default function Navbar({ scrolled }) {
           <img
             src="/images/logo3.png"
             alt="LocalServe logo"
-            className="w-20 h-20 object-contain drop-shadow-[0_0_14px_rgba(99,102,241,0.4)] group-hover:scale-105 transition-transform"
+            className="w-20 h-20 object-contain drop-shadow-[0_0_24px_rgba(6,182,212,0.4)] group-hover:drop-shadow-[0_0_32px_rgba(6,182,212,0.6)] group-hover:scale-105 transition-all duration-300"
           />
           <span className="hidden sm:inline -ml-1 text-2xl font-extrabold text-white tracking-tight">
             Local<span className="text-indigo-400">Serve</span>
@@ -58,13 +58,13 @@ export default function Navbar({ scrolled }) {
         <div className="hidden lg:flex items-center gap-4">
           <button
             onClick={() => navigate("/login")}
-            className="px-5 py-2 text-sm font-medium text-white border border-white/20 rounded-lg hover:bg-white/10 transition-all shadow-sm"
+            className="px-5 py-2 text-sm font-medium text-white border border-white/10 bg-white/5 rounded-lg hover:bg-white/10 hover:border-cyan-500/30 hover:shadow-[0_0_15px_rgba(6,182,212,0.15)] transition-all"
           >
             Sign In
           </button>
           <button
             onClick={() => navigate("/register")}
-            className="px-5 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-500 hover:-translate-y-0.5 transition-all shadow-[0_0_20px_rgba(99,102,241,0.4)]"
+            className="px-5 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-500 hover:-translate-y-0.5 transition-all shadow-[0_0_20px_rgba(99,102,241,0.4)] hover:shadow-[0_0_30px_rgba(99,102,241,0.6)]"
           >
             Get Started →
           </button>

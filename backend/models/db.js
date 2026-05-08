@@ -4,15 +4,16 @@ require('dotenv').config();
 let sequelize;
 
 if (process.env.DATABASE_URL) {
-  // 👉 Production (Railway / Render / Vercel backend)
+  // 👉 Production (Render / Neon PostgreSQL)
+  // Ensure DATABASE_URL is the DIRECT connection (no -pooler or pgbouncer)
   sequelize = new Sequelize(process.env.DATABASE_URL, {
     dialect: 'postgres',
     protocol: 'postgres',
-    logging: false,
+    logging: false, // Set to console.log to debug queries if needed
     dialectOptions: {
       ssl: {
         require: true,
-        rejectUnauthorized: false,
+        rejectUnauthorized: false, // Required for Neon
       },
     },
   });
@@ -30,21 +31,8 @@ if (process.env.DATABASE_URL) {
   );
 }
 
-// Authenticate and Sync Database
-const connectDB = async () => {
-  try {
-    await sequelize.authenticate();
-    console.log('✅ DB Connection has been established successfully.');
-
-    // sync() creates the table if it doesn't exist (and does nothing if it already exists)
-    // Use { alter: true } if you want to update tables to match your models without dropping data
-    await sequelize.sync({ force: false });
-    console.log('✅ All models were synchronized successfully.');
-  } catch (error) {
-    console.error('❌ Unable to connect to the database:', error);
-  }
-};
-
-connectDB();
+// NOTE: DO NOT call sequelize.sync() here.
+// Doing so creates a race condition because models are not imported yet.
+// Sync is handled securely in server.js.
 
 module.exports = sequelize;

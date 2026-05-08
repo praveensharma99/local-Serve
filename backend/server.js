@@ -72,16 +72,36 @@ app.get('/', (req, res) => {
 // 5. Database Sync aur Server Start
 const PORT = process.env.PORT || 5000;
 
-// Pehle Database sync hoga, uske baad hi server start hoga (Professional way)
-sequelize.sync({ alter: true })
-  .then(() => {
-    console.log('✅ Database Synced! Ab data delete nahi hoga.');
+// Proper Startup Sequence
+const startServer = async () => {
+  try {
+    // Phase 1: Test DB Connection
+    await sequelize.authenticate();
+    console.log('✅ DB Connection Successful!');
+
+    // Phase 2: Sync Tables
+    console.log('⏳ Syncing Database Models to Neon PostgreSQL...');
+    
+    // alter: true will safely update schema without dropping data
+    await sequelize.sync({ alter: true });
+    
+    console.log('✅ Database Synced Successfully! All tables are ready in the public schema.');
+
+    // Phase 3: Start Jobs and Listen
     startReminderJob();
     server.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📱 Access from mobile: http://192.168.11.203:${PORT}`);
     });
-  })
-  .catch(err => {
-    console.error('❌ Sync Error:', err);
-  });
+
+  } catch (error) {
+    console.error('❌ FATAL STARTUP ERROR:');
+    console.error('Failed to connect or sync database:', error.message);
+    console.error('Detailed Stack Trace:', error);
+    
+    // Exit process with failure so Render knows it failed to start
+    process.exit(1);
+  }
+};
+
+startServer();

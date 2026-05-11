@@ -51,7 +51,7 @@ const floatingServices = [
 
 export default function FloatingIcons() {
   return (
-    <div className="pointer-events-none absolute inset-0 z-20 hidden md:block">
+    <div className="pointer-events-none absolute inset-0 z-20">
       {floatingServices.map(({ Icon, label, pos, duration, delay, gradient, glow }) => (
         <div
           key={label}

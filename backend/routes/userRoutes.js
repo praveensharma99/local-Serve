@@ -1,8 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const User = require('../models/UserModel');
-const ProviderProfile = require('../models/providerModel');
-const Service = require('../models/ServiceModel');
+const { User, ProviderProfile, Service, Payment, Booking } = require('../models');
 const authMiddleware = require('../middleware/authMiddleware');
 const { Op, fn, col, where } = require('sequelize');
 
@@ -127,6 +125,24 @@ router.put('/profile', authMiddleware, async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// @route   GET api/user/payments/history
+// @desc    Get user's payment history
+router.get('/payments/history', authMiddleware, async (req, res) => {
+    try {
+        const payments = await Payment.findAll({
+            where: { userId: req.user.id },
+            include: [
+                { model: ProviderProfile, as: 'provider', include: [{ model: User, as: 'user', attributes: ['name'] }] },
+                { model: Booking, as: 'booking', attributes: ['serviceCategory', 'bookingDate', 'status'] }
+            ],
+            order: [['createdAt', 'DESC']]
+        });
+        res.json({ success: true, payments });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
     }
 });
 

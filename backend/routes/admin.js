@@ -1,10 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const User = require('../models/UserModel');
-const ProviderProfile = require('../models/providerModel');
+const { User, ProviderProfile, Booking, Service, Payment } = require('../models');
 const authMiddleware = require('../middleware/authMiddleware');
 const isAdmin = require('../middleware/isAdmin');
-const { Op, fn, col, where } = require('sequelize');
+const { Op, fn, col, where, Sequelize } = require('sequelize');
 
 /** Customers only: role `user` (case-insensitive), not admin or provider */
 const customerUserWhere = {
@@ -18,14 +17,13 @@ const customerUserWhere = {
 router.get('/dashboard-stats', authMiddleware, isAdmin, async (req, res) => {
     try {
         const totalUsers = await User.count({ where: customerUserWhere });
-        const BookingModel = require('../models/BookingModel');
         const activeProviders = await ProviderProfile.count({ where: { status: 'approved' } });
         const pendingProviders = await ProviderProfile.count({ where: { status: 'pending' } });
-        const totalBookings = await BookingModel.count();
-        const accepted = await BookingModel.count({ where: { status: 'accepted' } });
-        const pending = await BookingModel.count({ where: { status: 'pending' } });
-        const rejected = await BookingModel.count({ where: { status: 'rejected' } });
-        const completed = await BookingModel.count({ where: { status: 'completed' } });
+        const totalBookings = await Booking.count();
+        const accepted = await Booking.count({ where: { status: 'accepted' } });
+        const pending = await Booking.count({ where: { status: 'pending' } });
+        const rejected = await Booking.count({ where: { status: 'rejected' } });
+        const completed = await Booking.count({ where: { status: 'completed' } });
 
         const pendingQueue = await ProviderProfile.findAll({
             where: { status: 'pending' },
@@ -37,13 +35,45 @@ router.get('/dashboard-stats', authMiddleware, isAdmin, async (req, res) => {
             order: [['id', 'DESC']]
         });
 
+        const completedBookings = await Booking.findAll({
+            where: {
+                [Op.or]: [
+                    { paymentStatus: 'Paid' },
+                    { status: 'completed' }
+                ]
+            }
+        });
+
+        const allPayments = await Payment.findAll({
+            where: { paymentStatus: 'Completed' }
+        });
+
+        const totalRevenue = allPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
+
+        const todayRevenue = allPayments
+            .filter(p => new Date(p.createdAt) >= today)
+            .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
+        const monthlyRevenue = allPayments
+            .filter(p => new Date(p.createdAt) >= startOfMonth)
+            .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
         res.json({
             success: true,
             stats: {
                 users: totalUsers,
                 providers: activeProviders,
                 bookings: totalBookings,
-                revenue: 240000,
+                revenue: totalRevenue,
+                todayRevenue,
+                monthlyRevenue,
+                totalPayments: completedBookings.length,
                 bookingStats: { accepted, pending, rejected, completed }
             },
             pendingQueue: pendingQueue.map(p => ({
@@ -163,7 +193,6 @@ router.put('/reject-provider/:id', authMiddleware, isAdmin, async (req, res) => 
 // 1. GET ALL SERVICES (Fetch List)
 router.get('/get-services', authMiddleware, async (req, res) => {
   try {
-    const { Op } = require('sequelize');
     const showAll = req.query.all === 'true';
     const where = showAll ? {} : { [Op.or]: [{ isActive: true }, { isActive: null }] };
     const services = await Service.findAll({
@@ -177,14 +206,9 @@ router.get('/get-services', authMiddleware, async (req, res) => {
 });
 
 // 8. Add service
-const Service = require('../models/ServiceModel');
-const Booking = require('../models/BookingModel');
-
 // Admin Booking Stats (for charts)
 router.get('/booking-stats', authMiddleware, isAdmin, async (req, res) => {
   try {
-    const { Sequelize } = require('sequelize');
-
     const totalBookings = await Booking.count();
 
     const statusCounts = {
@@ -219,12 +243,34 @@ router.get('/booking-stats', authMiddleware, isAdmin, async (req, res) => {
 
     const monthlyBookings = monthlyRaw.map(r => ({ month: r.month, count: Number(r.count) }));
 
+    const revenueRaw = await Booking.findAll({
+      where: { 
+        createdAt: { [Sequelize.Op.gte]: sixMonthsAgo },
+        [Sequelize.Op.or]: [{ paymentStatus: 'Paid' }, { status: 'completed' }]
+      },
+      include: [{ model: ProviderProfile, as: 'provider', attributes: [] }],
+      attributes: [
+        [Sequelize.fn('TO_CHAR', Sequelize.col('Booking.createdAt'), 'Mon'), 'month'],
+        [Sequelize.fn('TO_CHAR', Sequelize.col('Booking.createdAt'), 'YYYY-MM'), 'sortKey'],
+        [Sequelize.fn('SUM', Sequelize.col('provider.price_per_hour')), 'revenue']
+      ],
+      group: [
+        Sequelize.fn('TO_CHAR', Sequelize.col('Booking.createdAt'), 'Mon'),
+        Sequelize.fn('TO_CHAR', Sequelize.col('Booking.createdAt'), 'YYYY-MM')
+      ],
+      order: [[Sequelize.fn('TO_CHAR', Sequelize.col('Booking.createdAt'), 'YYYY-MM'), 'ASC']],
+      raw: true
+    });
+
+    const revenueTrend = revenueRaw.map(r => ({ month: r.month, revenue: Number(r.revenue || 0) }));
+
     res.json({
       success: true,
       totalBookings,
       statusCounts,
       paymentDistribution: { COD: codCount, Online: onlineCount },
-      monthlyBookings
+      monthlyBookings,
+      revenueTrend
     });
   } catch (err) {
     console.error('Booking stats error:', err);
@@ -319,7 +365,22 @@ router.delete('/delete-service/:id', authMiddleware, async (req, res) => {
   }
 });
 
-module.exports = router;
+// @route   GET /admin/all-payments
+// @desc    Get all platform payments
+router.get('/all-payments', authMiddleware, isAdmin, async (req, res) => {
+    try {
+        const payments = await Payment.findAll({
+            include: [
+                { model: User, as: 'customer', attributes: ['name', 'email'] },
+                { model: ProviderProfile, as: 'provider', include: [{ model: User, as: 'user', attributes: ['name'] }] },
+                { model: Booking, as: 'booking', attributes: ['serviceCategory', 'bookingDate', 'status'] }
+            ],
+            order: [['createdAt', 'DESC']]
+        });
+        res.json({ success: true, payments });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
 
-// 📢 SIRF EK BAAR EXPORT KARNA HAI FILE KE END MEIN
 module.exports = router;

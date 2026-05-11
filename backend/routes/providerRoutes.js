@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const ProviderProfile = require('../models/providerModel');
-const User = require('../models/UserModel');
+const { ProviderProfile, User, Payment, Booking } = require('../models');
 const authMiddleware = require('../middleware/authMiddleware');
 
 // Provider ki apni profile fetch karne ka rasta
@@ -59,6 +58,29 @@ router.put('/profile', authMiddleware, async (req, res) => {
         res.json({ success: true, message: 'Profile updated successfully!' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// @route   GET api/provider/payments/earnings
+// @desc    Get provider's earnings and payment history
+router.get('/payments/earnings', authMiddleware, async (req, res) => {
+    try {
+        const profile = await ProviderProfile.findOne({ where: { userId: req.user.id } });
+        if (!profile) {
+            return res.status(404).json({ success: false, message: 'Provider profile not found' });
+        }
+
+        const payments = await Payment.findAll({
+            where: { providerId: profile.id },
+            include: [
+                { model: User, as: 'customer', attributes: ['name'] },
+                { model: Booking, as: 'booking', attributes: ['serviceCategory', 'bookingDate', 'status'] }
+            ],
+            order: [['createdAt', 'DESC']]
+        });
+        res.json({ success: true, payments });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
     }
 });
 

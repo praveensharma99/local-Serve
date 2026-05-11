@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Booking, User, ProviderProfile } = require('../models');
+const { Booking, User, ProviderProfile, Payment } = require('../models');
 const authMiddleware = require('../middleware/authMiddleware');
 const { sendEmail } = require('../utils/email');
 const { bookingAcceptedTemplate, providerReminderTemplate } = require('../utils/emailTemplates');
@@ -179,6 +179,21 @@ router.put('/payment/:id', authMiddleware, async (req, res) => {
 
     booking.paymentStatus = 'Paid';
     await booking.save();
+
+    const provider = await ProviderProfile.findByPk(booking.providerId);
+    const amount = provider ? provider.pricePerHour : 0;
+    const randomSuffix = Math.floor(10000 + Math.random() * 90000);
+
+    await Payment.create({
+      amount: amount,
+      paymentStatus: 'Completed',
+      transactionId: `TXN-COD-${randomSuffix}`,
+      paymentMethod: 'COD',
+      userId: req.user.id,
+      providerId: booking.providerId,
+      bookingId: booking.id
+    });
+
     res.json({ success: true, message: 'Payment marked as completed', booking });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

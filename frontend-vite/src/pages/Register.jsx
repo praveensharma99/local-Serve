@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { API_BASE_URL } from '../config/api';
-import { User, UserPlus, Mail, Check } from 'lucide-react';
+import { User, UserPlus, Mail, Check, Eye, EyeOff } from 'lucide-react';
+import ParticleBackground from '../components/ParticleBackground';
+import AuthBranding from '../components/AuthBranding';
 
 function Register() {
   const navigate = useNavigate();
@@ -18,10 +20,48 @@ function Register() {
   const [loading, setLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
+  
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  const validateField = (name, value) => {
+    let errorMsg = '';
+    
+    if (name === 'name') {
+      const nameRegex = /^[A-Za-z\s]{3,}$/;
+      if (value && !nameRegex.test(value)) errorMsg = 'Only alphabets allowed, min 3 characters.';
+    } else if (name === 'email') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (value && !emailRegex.test(value)) errorMsg = 'Please enter a valid email address.';
+    } else if (name === 'password') {
+      const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+      if (value && !passRegex.test(value)) {
+        errorMsg = 'Min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char.';
+      }
+      // Re-validate confirmPassword if password changes
+      if (formData.confirmPassword && value !== formData.confirmPassword) {
+        setErrors(prev => ({ ...prev, confirmPassword: 'Passwords do not match!' }));
+      } else if (formData.confirmPassword) {
+        setErrors(prev => ({ ...prev, confirmPassword: '' }));
+      }
+    } else if (name === 'confirmPassword') {
+      if (value && value !== formData.password) errorMsg = 'Passwords do not match!';
+    }
+    
+    setErrors(prev => ({ ...prev, [name]: errorMsg }));
+  };
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+    validateField(name, value);
   };
+
+  const isFormValid = 
+    !errors.name && !errors.email && !errors.password && !errors.confirmPassword &&
+    formData.name && formData.email && formData.password && formData.confirmPassword &&
+    formData.city && formData.state;
 
   const handleVerify = async () => {
     if (!formData.email) {
@@ -114,19 +154,14 @@ function Register() {
   };
 
   return (
-    <div className="h-screen w-full overflow-hidden bg-[#030B1D] font-['Inter',sans-serif]">
-      <div className="relative flex h-screen w-full">
+    <div className="h-screen w-full overflow-hidden bg-[#030B1D] font-['Inter',sans-serif] relative">
+      <ParticleBackground />
+      <AuthBranding />
+      <div className="relative flex h-screen w-full z-10">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_12%,rgba(59,130,246,0.18),transparent_45%),radial-gradient(circle_at_82%_48%,rgba(99,102,241,0.16),transparent_48%)]" />
 
         {/* LEFT SECTION: PREMIMUM ORBIT UI */}
         <section className="relative hidden h-full w-1/2 items-center justify-center lg:flex">
-          <div className="absolute left-12 top-10 flex items-center gap-3">
-            <img src="/images/logo3.png" alt="LocalServe logo" className="h-16 w-16 object-contain" />
-            <h1 className="text-[30px] font-bold tracking-tight text-white">
-              Local<span className="text-indigo-400">Serve</span>
-            </h1>
-          </div>
-
           <div className="relative flex h-[450px] w-[450px] items-center justify-center">
             {/* Visual Background Orbits */}
             <div className="absolute h-full w-full rounded-full border border-blue-500/10 shadow-[inset_0_0_50px_rgba(59,130,246,0.05)]" />
@@ -179,12 +214,6 @@ function Register() {
         <section className="relative flex h-full w-full items-center justify-center px-5 lg:w-1/2 overflow-y-auto pt-10 pb-10">
           <div className="w-full max-w-[620px] rounded-[32px] border border-white/10 bg-[#0C1430]/88 p-8 shadow-[0_25px_70px_rgba(30,41,96,0.45)] backdrop-blur-xl">
             <div className="mb-6">
-              <div className="mb-3 flex items-center justify-center gap-2 lg:hidden">
-                <img src="/images/logo3.png" alt="LocalServe logo" className="h-12 w-12 object-contain" />
-                <p className="text-lg font-bold text-white">
-                  Local<span className="text-indigo-400">Serve</span>
-                </p>
-              </div>
               <h2 className="text-[32px] font-bold tracking-tight text-white">Create Account</h2>
               <p className="text-slate-400 mt-1">Join the community of LocalServe</p>
             </div>
@@ -224,31 +253,35 @@ function Register() {
                   type="text"
                   name="name"
                   placeholder="John Doe"
-                  className="h-12 w-full rounded-xl border border-white/10 bg-[#070d1f] px-4 text-white outline-none transition focus:border-blue-500/50"
+                  className={`h-12 w-full rounded-xl border bg-[#070d1f] px-4 text-white outline-none transition focus:border-blue-500/50 ${errors.name ? 'border-red-500/80' : 'border-white/10'}`}
                   value={formData.name}
                   onChange={handleChange}
                   required
                 />
+                {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
               </div>
 
               <div className="md:col-span-2">
                 <label className="mb-1.5 block text-xs font-medium text-slate-400">Email Address</label>
                 <div className="flex gap-2">
-                  <input
-                    type="email"
-                    name="email"
-                    placeholder="john@example.com"
-                    className="h-12 flex-1 rounded-xl border border-white/10 bg-[#070d1f] px-4 text-white outline-none transition focus:border-blue-500/50 disabled:opacity-50"
-                    value={formData.email}
-                    onChange={handleChange}
-                    disabled={otpSent}
-                    required
-                  />
+                  <div className="flex-1 flex flex-col">
+                    <input
+                      type="email"
+                      name="email"
+                      placeholder="john@example.com"
+                      className={`h-12 rounded-xl border bg-[#070d1f] px-4 text-white outline-none transition focus:border-blue-500/50 disabled:opacity-50 ${errors.email ? 'border-red-500/80' : 'border-white/10'}`}
+                      value={formData.email}
+                      onChange={handleChange}
+                      disabled={otpSent}
+                      required
+                    />
+                    {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
+                  </div>
                   <button
                     type="button"
                     onClick={handleVerify}
-                    disabled={loading || otpSent}
-                    className="h-12 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 text-sm font-bold text-white transition hover:brightness-110 disabled:opacity-50"
+                    disabled={loading || otpSent || !!errors.email || !formData.email || !!errors.name || !formData.name}
+                    className="h-12 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 text-sm font-bold text-white transition hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {otpSent ? "Sent" : "Verify"}
                   </button>
@@ -273,28 +306,48 @@ function Register() {
 
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-slate-400">Password</label>
-                <input
-                  type="password"
-                  name="password"
-                  placeholder="••••••••"
-                  className="h-12 w-full rounded-xl border border-white/10 bg-[#070d1f] px-4 text-white outline-none transition focus:border-blue-500/50"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                />
+                <div className={`flex h-12 w-full items-center rounded-xl border bg-[#070d1f] px-4 transition-all focus-within:border-blue-500/50 ${errors.password ? 'border-red-500/80' : 'border-white/10'}`}>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    placeholder="••••••••"
+                    className="h-full w-full bg-transparent text-white outline-none"
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="ml-2 text-slate-500 hover:text-slate-300 transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password}</p>}
               </div>
 
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-slate-400">Confirm Password</label>
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  placeholder="••••••••"
-                  className="h-12 w-full rounded-xl border border-white/10 bg-[#070d1f] px-4 text-white outline-none transition focus:border-blue-500/50"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  required
-                />
+                <div className={`flex h-12 w-full items-center rounded-xl border bg-[#070d1f] px-4 transition-all focus-within:border-blue-500/50 ${errors.confirmPassword ? 'border-red-500/80' : 'border-white/10'}`}>
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    name="confirmPassword"
+                    placeholder="••••••••"
+                    className="h-full w-full bg-transparent text-white outline-none"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    required
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="ml-2 text-slate-500 hover:text-slate-300 transition-colors"
+                  >
+                    {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                {errors.confirmPassword && <p className="mt-1 text-xs text-red-500">{errors.confirmPassword}</p>}
               </div>
 
               <div>
@@ -332,8 +385,8 @@ function Register() {
               <div className="md:col-span-2 pt-4">
                 <button
                   type="submit"
-                  disabled={loading}
-                  className="flex h-12 w-full items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-base font-bold text-white shadow-lg shadow-blue-900/20 transition hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60"
+                  disabled={loading || !isFormValid}
+                  className="flex h-12 w-full items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-base font-bold text-white shadow-lg shadow-blue-900/20 transition hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed"
                 >
                   {loading ? (
                     <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />

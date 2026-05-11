@@ -8,9 +8,9 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 // import UserDashboard from './pages/UserDashboard';
-import UserDashboard from "./pages/User/UserDashboard";
-import ServiceProviders from "./pages/User/ServiceProviders";
-import UserBookings from "./pages/User/UserBookings";
+import UserDashboard from "./pages/user/UserDashboard";
+import ServiceProviders from "./pages/user/ServiceProviders";
+import UserBookings from "./pages/user/UserBookings";
 
 // Folder wale pages
 import AdminDashboard from "./pages/Admin/AdminDashboard";

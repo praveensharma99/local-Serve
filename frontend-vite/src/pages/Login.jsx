@@ -2,16 +2,33 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { API_BASE_URL } from '../config/api';
-import { Mail, Lock, Shield, KeyRound, Fingerprint } from 'lucide-react';
+import { Mail, Lock, Shield, KeyRound, Fingerprint, Eye, EyeOff } from 'lucide-react';
+import ParticleBackground from '../components/ParticleBackground';
+import AuthBranding from '../components/AuthBranding';
 
 function Login() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  const validateField = (name, value) => {
+    let errorMsg = '';
+    if (name === 'email') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (value && !emailRegex.test(value)) errorMsg = 'Please enter a valid email address';
+    }
+    setErrors(prev => ({ ...prev, [name]: errorMsg }));
+  };
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+    validateField(name, value);
   };
+
+  const isFormValid = formData.email && formData.password && !errors.email;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -58,17 +75,13 @@ function Login() {
   };
 
   return (
-    <div className="h-screen w-full overflow-hidden bg-[#030B1D] font-['Inter',sans-serif]">
-      <div className="relative flex h-screen w-full">
+    <div className="h-screen w-full overflow-hidden bg-[#030B1D] font-['Inter',sans-serif] relative">
+      <ParticleBackground />
+      <AuthBranding />
+      <div className="relative flex h-screen w-full z-10">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_12%,rgba(59,130,246,0.18),transparent_45%),radial-gradient(circle_at_82%_48%,rgba(99,102,241,0.16),transparent_48%)]" />
 
         <section className="relative hidden h-full w-1/2 items-center justify-center lg:flex">
-          <div className="absolute left-12 top-10 flex items-center gap-3">
-            <img src="/images/logo3.png" alt="LocalServe logo" className="h-16 w-16 object-contain" />
-            <h1 className="text-[30px] font-bold tracking-tight text-white">
-              Local<span className="text-indigo-400">Serve</span>
-            </h1>
-          </div>
 
           {/* ORBIT SYSTEM CONTAINER */}
           <div className="relative flex h-[450px] w-[450px] items-center justify-center">
@@ -125,10 +138,6 @@ function Login() {
         <section className="relative flex h-full w-full items-center justify-center px-5 lg:w-1/2">
           <div className="w-full max-w-[500px] rounded-[32px] border border-white/10 bg-[#0C1430]/80 p-8 shadow-[0_25px_70px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
             <div className="mb-8">
-              <div className="mb-4 flex items-center justify-center gap-2 lg:hidden">
-                <img src="/images/logo3.png" alt="LocalServe logo" className="h-12 w-12 object-contain" />
-                <p className="text-xl font-bold text-white">Local<span className="text-indigo-400">Serve</span></p>
-              </div>
               <h2 className="text-3xl font-extrabold tracking-tight text-white">Welcome Back</h2>
               <p className="mt-2 text-slate-400">Securely sign in to your LocalServe account</p>
             </div>
@@ -136,8 +145,8 @@ function Login() {
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label className="mb-2 block text-sm font-medium text-slate-300">Email Address</label>
-                <div className="flex h-12 items-center gap-3 rounded-xl border border-white/10 bg-[#070d1f] px-4 transition-all focus-within:border-blue-500/50">
-                  <Mail size={18} className="text-slate-500" />
+                <div className={`flex h-12 items-center gap-3 rounded-xl border bg-[#070d1f] px-4 transition-all focus-within:border-blue-500/50 ${errors.email ? 'border-red-500/80' : 'border-white/10'}`}>
+                  <Mail size={18} className={errors.email ? "text-red-400" : "text-slate-500"} />
                   <input
                     type="email"
                     name="email"
@@ -148,6 +157,7 @@ function Login() {
                     required
                   />
                 </div>
+                {errors.email && <p className="mt-1.5 text-xs font-medium text-red-500">{errors.email}</p>}
               </div>
 
               <div>
@@ -158,7 +168,7 @@ function Login() {
                 <div className="flex h-12 items-center gap-3 rounded-xl border border-white/10 bg-[#070d1f] px-4 transition-all focus-within:border-blue-500/50">
                   <Lock size={18} className="text-slate-500" />
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     name="password"
                     className="h-full w-full bg-transparent text-white outline-none placeholder:text-slate-600"
                     placeholder="••••••••"
@@ -166,13 +176,20 @@ function Login() {
                     onChange={handleChange}
                     required
                   />
+                  <button 
+                    type="button" 
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-slate-500 hover:text-slate-300 transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
               </div>
 
               <button
                 type="submit"
-                disabled={loading}
-                className="relative flex h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-sm font-bold text-white shadow-lg transition-all hover:scale-[1.01] active:scale-[0.98] disabled:opacity-70"
+                disabled={loading || !isFormValid}
+                className="relative flex h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-sm font-bold text-white shadow-lg transition-all hover:scale-[1.01] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white"></div>

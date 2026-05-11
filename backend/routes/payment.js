@@ -3,7 +3,7 @@ const router = express.Router();
 const crypto = require('crypto');
 const razorpay = require('../utils/razorpay');
 const authMiddleware = require('../middleware/authMiddleware');
-const { Booking, ProviderProfile } = require('../models');
+const { Booking, ProviderProfile, Payment } = require('../models');
 
 // @route   POST /api/payments/create-order
 // @desc    Create Razorpay order for a booking
@@ -77,6 +77,19 @@ router.post('/verify', authMiddleware, async (req, res) => {
     booking.paymentMode = 'Online';
     booking.paymentStatus = 'Paid';
     await booking.save();
+
+    const provider = await ProviderProfile.findByPk(booking.providerId);
+    const amount = provider ? provider.pricePerHour : 0;
+
+    await Payment.create({
+      amount: amount,
+      paymentStatus: 'Completed',
+      transactionId: razorpay_payment_id,
+      paymentMethod: 'Online',
+      userId: req.user.id,
+      providerId: booking.providerId,
+      bookingId: booking.id
+    });
 
     res.json({ success: true, message: 'Payment verified successfully' });
   } catch (err) {

@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import UsersProviders from "./UsersProviders";
 import AdminBookings from "./AdminBookings";
 import AddService from "./AddService";
+import { motion } from "framer-motion";
 
 import {
   LayoutDashboard, Users, Wrench, LogOut,
@@ -22,7 +23,6 @@ const sidebarTabs = [
   { id: "add-service", label: "Add Service", icon: PlusSquare },
   { id: "bookings", label: "Bookings", icon: CalendarDays },
   { id: "revenue", label: "Revenue", icon: IndianRupee },
-  { id: "disputes", label: "Disputes", icon: AlertTriangle, count: "2" },
 ];
 
 const emptyStats = { users: 0, providers: 0, pending: 0, revenue: "0" };
@@ -32,7 +32,10 @@ function normalizeStats(stats = {}) {
     users: stats.users ?? stats.totalUsers ?? 0,
     providers: stats.providers ?? stats.totalProviders ?? 0,
     pending: stats.pending ?? stats.totalPending ?? 0,
-    revenue: stats.revenue ?? stats.totalRevenue ?? "0",
+    revenue: stats.revenue ?? stats.totalRevenue ?? 0,
+    todayRevenue: stats.todayRevenue ?? 0,
+    monthlyRevenue: stats.monthlyRevenue ?? 0,
+    totalPayments: stats.totalPayments ?? 0,
   };
 }
 
@@ -42,6 +45,7 @@ export default function AdminDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState(emptyStats);
   const [pendingQueue, setPendingQueue] = useState([]);
+  const [payments, setPayments] = useState([]);
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
   const [bookingStats, setBookingStats] = useState(null);
@@ -69,6 +73,12 @@ export default function AdminDashboard() {
         });
         const bsData = await bsRes.json();
         if (bsData.success) setBookingStats(bsData);
+
+        const payRes = await fetch(`${API_BASE_URL}/api/admin/all-payments`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        const payData = await payRes.json();
+        if (payData.success) setPayments(payData.payments);
       } catch { /* ignore */ }
     } catch (err) {
       setError(err.message || "Failed to load dashboard data");
@@ -128,7 +138,7 @@ export default function AdminDashboard() {
   );
 
   const cards = [
-    { label: "Revenue", value: `₹${stats.revenue}`, icon: IndianRupee, tone: "text-emerald-400", bg: "bg-emerald-400/10", hint: "Total platform earnings" },
+    { label: "Revenue", value: `₹${Number(stats.revenue).toLocaleString('en-IN')}`, icon: IndianRupee, tone: "text-emerald-400", bg: "bg-emerald-400/10", hint: "Total platform earnings" },
     { label: "Users", value: stats.users, icon: Users, tone: "text-cyan-400", bg: "bg-cyan-400/10", hint: "Registered customers", tab: "users-providers" },
     { label: "Providers", value: stats.providers, icon: Wrench, tone: "text-violet-400", bg: "bg-violet-400/10", hint: "Approved partners", tab: "users-providers" },
     { label: "Pending", value: stats.pending, icon: Clock, tone: "text-amber-400", bg: "bg-amber-400/10", hint: "Needs review" },
@@ -257,7 +267,10 @@ export default function AdminDashboard() {
           {activeTab === "users-providers" && <UsersProviders />}
           {activeTab === "bookings" && <AdminBookings />}
           {activeTab === "add-service" && <AddService />}
-          {!["overview", "users-providers", "bookings", "add-service"].includes(activeTab) && (
+          {activeTab === "revenue" && (
+            <RevenuePanel stats={stats} revenueTrend={bookingStats?.revenueTrend} payments={payments} />
+          )}
+          {!["overview", "users-providers", "bookings", "add-service", "revenue"].includes(activeTab) && (
             <ComingSoon activeTab={activeTab} />
           )}
         </main>
@@ -270,24 +283,23 @@ export default function AdminDashboard() {
 
 function BrandBlock({ onLogoClick, onCloseMobile }) {
   return (
-    <div className="flex items-center justify-between gap-2 border-b border-slate-800/80 px-4 py-4">
-      <button
-        type="button"
+    <div className="flex items-center justify-between gap-2 border-b border-white/5 px-6 py-6 bg-[#0f172a]/40">
+      <div
         onClick={onLogoClick}
-        className="flex min-w-0 flex-1 items-center gap-3 rounded-lg text-left outline-none ring-indigo-500/40 transition hover:bg-slate-800/50 focus-visible:ring-2"
+        className="flex items-center gap-0.5 cursor-pointer group"
       >
         <img
           src="/images/logo3.png"
-          alt="LocalServe"
-          className="h-9 w-9 shrink-0 object-contain"
+          alt="LocalServe logo"
+          className="w-14 h-14 object-contain drop-shadow-[0_0_20px_rgba(6,182,212,0.3)] group-hover:drop-shadow-[0_0_28px_rgba(6,182,212,0.5)] group-hover:scale-105 transition-all duration-300"
         />
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold tracking-tight text-white">
+        <div className="flex flex-col -ml-1">
+          <span className="text-xl font-extrabold text-white tracking-tight leading-tight">
             Local<span className="text-indigo-400">Serve</span>
-          </p>
-          <p className="text-xs text-slate-500">Admin</p>
+          </span>
+          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mt-0.5">Admin Panel</span>
         </div>
-      </button>
+      </div>
       {onCloseMobile ? (
         <button
           type="button"
@@ -703,6 +715,141 @@ function CategoryDistributionChart({ pendingQueue }) {
         ))}
       </div>
     </ChartCard>
+  );
+}
+
+function RevenuePanel({ stats, revenueTrend, payments = [] }) {
+  const formatValue = (v) => `₹${Number(v).toLocaleString('en-IN')}`;
+  
+  const revCards = [
+    { label: "Total Revenue", value: formatValue(stats.revenue), icon: IndianRupee, tone: "text-emerald-400", bg: "bg-emerald-400/10", hint: "Lifetime platform earnings" },
+    { label: "Today's Revenue", value: formatValue(stats.todayRevenue), icon: TrendingUp, tone: "text-blue-400", bg: "bg-blue-400/10", hint: "Earnings since midnight" },
+    { label: "Monthly Revenue", value: formatValue(stats.monthlyRevenue), icon: CalendarDays, tone: "text-violet-400", bg: "bg-violet-400/10", hint: "Current month earnings" },
+    { label: "Successful Payments", value: stats.totalPayments, icon: CheckCircle, tone: "text-cyan-400", bg: "bg-cyan-400/10", hint: "Total paid transactions" },
+  ];
+
+  const maxRev = revenueTrend?.length > 0 ? Math.max(...revenueTrend.map(d => d.revenue)) : 0;
+
+  return (
+    <div className="mx-auto max-w-7xl space-y-8 animate-fadeInUp">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {revCards.map((card, i) => (
+          <div key={i} className="rounded-2xl border border-slate-800/80 bg-slate-900/40 p-6 stat-card-hover transition-all">
+            <div className={`mb-4 w-fit rounded-xl p-3 ${card.bg} ${card.tone}`}>
+              <card.icon className="h-6 w-6" strokeWidth={1.75} />
+            </div>
+            <h3 className="text-3xl font-bold tabular-nums text-white tracking-tight">{card.value}</h3>
+            <p className="mt-1 text-sm font-medium text-slate-400">{card.label}</p>
+            <p className="mt-1 text-[10px] text-slate-500 uppercase tracking-widest">{card.hint}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Revenue Trend Chart */}
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/40 p-6 sm:p-8">
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-bold text-white">Revenue Growth</h3>
+              <p className="text-xs text-slate-500">Earnings trend over the last 6 months</p>
+            </div>
+            <BarChart3 className="h-5 w-5 text-indigo-400" />
+          </div>
+          
+          <div className="space-y-6">
+            {revenueTrend?.length > 0 ? (
+              revenueTrend.map((d, i) => (
+                <div key={i} className="group">
+                  <div className="flex items-center justify-between mb-2 text-xs font-medium">
+                    <span className="text-slate-400 group-hover:text-white transition-colors">{d.month}</span>
+                    <span className="text-white tabular-nums">{formatValue(d.revenue)}</span>
+                  </div>
+                  <div className="h-3 overflow-hidden rounded-full bg-slate-950/60 ring-1 ring-white/5">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${maxRev ? (d.revenue / maxRev) * 100 : 0}%` }}
+                      transition={{ duration: 1, delay: i * 0.1 }}
+                      className="h-full rounded-full bg-gradient-to-r from-emerald-600 to-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.3)]"
+                    />
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="flex h-48 flex-col items-center justify-center text-center opacity-50">
+                <TrendingUp className="mb-2 h-10 w-10 text-slate-600" />
+                <p className="text-sm font-medium text-slate-500">No revenue data found</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Analytics Card */}
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/40 p-6 sm:p-8 flex flex-col justify-center relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none">
+            <Sparkles size={240} className="text-indigo-500" />
+          </div>
+          <div className="relative z-10 text-center lg:text-left">
+            <h3 className="text-2xl font-black text-white leading-tight">
+              Platform Activity<br />
+              <span className="bg-gradient-to-r from-indigo-400 to-emerald-400 bg-clip-text text-transparent">Insights</span>
+            </h3>
+            <p className="mt-4 text-sm text-slate-400 leading-relaxed max-w-sm mx-auto lg:mx-0">
+              The platform has processed {stats.totalPayments} successful transactions. 
+              The average transaction value and daily growth are being calculated in real-time.
+            </p>
+            <div className="mt-8 flex flex-col sm:flex-row gap-4 items-center justify-center lg:justify-start">
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-center min-w-[120px]">
+                <p className="text-[10px] uppercase font-black tracking-widest text-slate-500">Today</p>
+                <p className="text-xl font-bold text-emerald-400 mt-1">{formatValue(stats.todayRevenue)}</p>
+              </div>
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-center min-w-[120px]">
+                <p className="text-[10px] uppercase font-black tracking-widest text-slate-500">Transactions</p>
+                <p className="text-xl font-bold text-indigo-400 mt-1">{stats.totalPayments}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Transaction List */}
+      <div className="rounded-2xl border border-slate-800/80 bg-slate-900/40 overflow-hidden mt-8">
+        <div className="px-6 py-4 border-b border-white/5 bg-white/[0.02]">
+          <h3 className="font-semibold text-white">Recent Transactions</h3>
+        </div>
+        {payments.length > 0 ? (
+          <div className="divide-y divide-white/5 max-h-[500px] overflow-y-auto custom-scrollbar">
+            {payments.map(p => (
+              <div key={p.id} className="p-4 sm:p-5 hover:bg-white/[0.02] transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 shrink-0 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold">
+                    {p.customer?.name?.charAt(0) || 'C'}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white">{p.customer?.name || 'User'} <span className="text-slate-500 text-xs font-normal">to</span> {p.provider?.user?.name || 'Provider'}</p>
+                    <p className="text-xs text-slate-400">{p.booking?.serviceCategory} • {p.transactionId}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-6 sm:justify-end">
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-emerald-400">₹{Number(p.amount).toLocaleString('en-IN')}</p>
+                    <p className="text-xs text-slate-500">{new Date(p.createdAt).toLocaleDateString()}</p>
+                  </div>
+                  <span className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider border ${p.paymentMethod === 'Online' ? 'bg-violet-500/10 text-violet-400 border-violet-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
+                    {p.paymentMethod}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="p-12 text-center">
+            <TrendingUp className="h-10 w-10 text-slate-600 mx-auto mb-3" />
+            <p className="text-sm font-medium text-slate-400">No transactions recorded yet.</p>
+          </div>
+        )}
+      </div>
+
+    </div>
   );
 }
 

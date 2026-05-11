@@ -11,6 +11,11 @@ function generateOtp() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+// Regex Validation Rules
+const nameRegex = /^[A-Za-z\s]{3,}$/;
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
 }
@@ -29,8 +34,11 @@ const sendOtp = async (req, res) => {
   const email = normalizeEmail(req.body.email);
   console.log('[sendOtp] Request received for email:', email);
   try {
-    if (!email) {
-      return res.status(400).json({ success: false, message: 'Email is required!' });
+    if (!email || !emailRegex.test(email)) {
+      return res.status(400).json({ success: false, message: 'Please provide a valid email address.' });
+    }
+    if (!name || !nameRegex.test(String(name).trim())) {
+      return res.status(400).json({ success: false, message: 'Name must contain only alphabets and be at least 3 characters long.' });
     }
 
     const existingUser = await User.findOne({ where: emailWhere(email) });
@@ -75,8 +83,14 @@ const register = async (req, res) => {
       return res.status(400).json({ success: false, message: 'OTP is required!' });
     }
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ success: false, message: 'Name, email and password are required!' });
+    if (!name || !nameRegex.test(name)) {
+      return res.status(400).json({ success: false, message: 'Name must contain only alphabets and be at least 3 characters long.' });
+    }
+    if (!email || !emailRegex.test(email)) {
+      return res.status(400).json({ success: false, message: 'Please provide a valid email address.' });
+    }
+    if (!password || !passRegex.test(password)) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 8 chars, contain an uppercase, lowercase, number, and special character.' });
     }
 
     const existingUser = await User.findOne({ where: emailWhere(email) });
@@ -140,8 +154,11 @@ const login = async (req, res) => {
   const email = normalizeEmail(req.body.email);
   const { password } = req.body;
   try {
-    if (!email || !password) {
-      return res.status(400).json({ success: false, message: 'Email and password are required' });
+    if (!email || !emailRegex.test(email)) {
+      return res.status(400).json({ success: false, message: 'Please provide a valid email address' });
+    }
+    if (!password) {
+      return res.status(400).json({ success: false, message: 'Password is required' });
     }
 
     const user = await User.findOne({ where: emailWhere(email) });

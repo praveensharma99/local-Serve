@@ -201,6 +201,37 @@ export default function UserBookings() {
     return bDate === today;
   };
 
+  const checkIsExpired = (dateStr, slotStr) => {
+    if (!dateStr || !slotStr) return false;
+    try {
+      const bDate = new Date(dateStr);
+      const timeParts = String(slotStr).split('-');
+      if (timeParts.length < 2) {
+         bDate.setHours(23, 59, 59, 999);
+         return bDate < new Date();
+      }
+      
+      const endTimeStr = timeParts[1].trim();
+      const timeMatch = endTimeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (!timeMatch) {
+         bDate.setHours(23, 59, 59, 999);
+         return bDate < new Date();
+      }
+      
+      let [_, hours, minutes, ampm] = timeMatch;
+      hours = parseInt(hours, 10);
+      minutes = parseInt(minutes, 10);
+      
+      if (ampm.toUpperCase() === 'PM' && hours < 12) hours += 12;
+      if (ampm.toUpperCase() === 'AM' && hours === 12) hours = 0;
+      
+      bDate.setHours(hours, minutes, 0, 0);
+      return bDate < new Date();
+    } catch (e) {
+      return false;
+    }
+  };
+
   const stats = [
     {
       label: "Total",
@@ -320,10 +351,12 @@ export default function UserBookings() {
   };
 
   const BookingRow = ({ booking }) => {
-    const showPayNow =
-      booking.status === "accepted" &&
-      booking.paymentStatus !== "Paid";
-    const showChat = ["accepted", "completed"].includes(booking.status);
+    const expired = checkIsExpired(booking.bookingDate, booking.bookingSlot);
+    const isCompletedOrCancelled = ["completed", "rejected", "cancelled"].includes(booking.status);
+    const disableActions = expired || isCompletedOrCancelled;
+
+    const showPayNow = booking.status === "accepted" && booking.paymentStatus !== "Paid";
+    const showChat = ["accepted", "completed"].includes(booking.status); // Will be disabled if completed based on disableActions
     const unreadCount = unreadCounts[booking.id] || 0;
 
     return (
@@ -383,7 +416,14 @@ export default function UserBookings() {
 
         {/* Status */}
         <div className="min-w-0">
-          {statusBadge(booking.status)}
+          <div className="flex flex-col gap-1.5 items-start">
+            {statusBadge(booking.status)}
+            {expired && booking.status === "accepted" && (
+              <span className="inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border bg-rose-500/10 text-rose-400 border-rose-500/20" title="Service window ended">
+                Expired
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Actions */}
@@ -391,14 +431,20 @@ export default function UserBookings() {
           {showChat && (
             <button
               onClick={() => {
+                if (disableActions) return;
                 setChatBooking(booking);
                 setUnreadCounts((prev) => ({ ...prev, [booking.id]: 0 }));
               }}
-              className="relative h-8 w-8 shrink-0 rounded-full border border-violet-500/20 text-violet-400 hover:bg-violet-500/10 flex items-center justify-center transition-all"
-              title="Chat with provider"
+              disabled={disableActions}
+              title={disableActions ? "Service window ended" : "Chat with provider"}
+              className={`relative h-8 w-8 shrink-0 rounded-full border flex items-center justify-center transition-all ${
+                disableActions 
+                  ? "border-slate-500/20 text-slate-500 bg-slate-500/5 cursor-not-allowed opacity-60"
+                  : "border-violet-500/20 text-violet-400 hover:bg-violet-500/10"
+              }`}
             >
               <MessageCircle className="h-3.5 w-3.5" />
-              {unreadCount > 0 && (
+              {unreadCount > 0 && !disableActions && (
                 <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-black text-white ring-2 ring-[#12142a]">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
@@ -407,9 +453,16 @@ export default function UserBookings() {
           )}
           {showPayNow && (
             <button
-              onClick={() => handlePayNow(booking.id)}
-              disabled={payingId === booking.id}
-              className="flex shrink-0 items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-wider hover:bg-emerald-500/20 transition-all disabled:opacity-50"
+              onClick={() => {
+                if (!disableActions) handlePayNow(booking.id);
+              }}
+              disabled={payingId === booking.id || disableActions}
+              title={disableActions ? "Booking time has expired" : "Pay for service"}
+              className={`flex shrink-0 items-center gap-1.5 px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-wider transition-all ${
+                disableActions
+                  ? "bg-slate-500/5 border-slate-500/20 text-slate-500 cursor-not-allowed opacity-60"
+                  : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-50"
+              }`}
             >
               <CreditCard className="h-3 w-3" />
               {payingId === booking.id ? "..." : "Pay"}

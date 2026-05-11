@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   Menu,
   X,
+  MessageSquare,
 } from "lucide-react";
 import Swal from "sweetalert2";
 import {
@@ -34,7 +35,9 @@ import {
 import { Doughnut, Line } from 'react-chartjs-2';
 import { toast } from "react-toastify";
 import ManageBookings from "./ManageBookings";
+import ProviderMessages from "./ProviderMessages";
 import { API_BASE_URL } from "../../config/api";
+import { io } from 'socket.io-client';
 
 ChartJS.register(
   CategoryScale,
@@ -52,6 +55,7 @@ ChartJS.register(
 const sidebarTabs = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "orders", label: "Manage Bookings", icon: Briefcase },
+  { id: "messages", label: "Messages", icon: MessageSquare },
   { id: "earnings", label: "Earnings", icon: Wallet },
   { id: "profile", label: "Profile", icon: User },
 ];
@@ -61,6 +65,7 @@ export default function ProviderDashboard() {
   const [providerData, setProviderData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const navigate = useNavigate();
 
   const selectTab = (id) => {
@@ -76,6 +81,7 @@ export default function ProviderDashboard() {
     [providerData?.city, providerData?.state].filter(Boolean).join(", ") ||
     "India";
   const [bookings, setBookings] = useState([]);
+  const [payments, setPayments] = useState([]);
   const [bookingFilter, setBookingFilter] = useState("all"); // all | pending | accepted | rejected
 
   useEffect(() => {
@@ -105,7 +111,7 @@ export default function ProviderDashboard() {
     fetchProfile();
   }, [navigate]);
 
-  // 1. Bookings fetch karne ka function
+  // 1. Bookings & Payments fetch karne ka function
   const fetchBookings = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -117,8 +123,15 @@ export default function ProviderDashboard() {
       );
       const data = await res.json();
       if (data.success) setBookings(data.bookings);
+
+      const payRes = await fetch(
+        `${API_BASE_URL}/api/provider/payments/earnings`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const payData = await payRes.json();
+      if (payData.success) setPayments(payData.payments);
     } catch (err) {
-      console.error("Error:", err);
+      console.error("Error fetching data:", err);
     }
   };
 
@@ -177,7 +190,37 @@ export default function ProviderDashboard() {
   };
 
   useEffect(() => {
-    if (providerData && providerData.status !== "pending") fetchBookings();
+    if (providerData && providerData.status !== "pending") {
+      fetchBookings();
+
+      const token = localStorage.getItem('token');
+      const socket = io(API_BASE_URL, { auth: { token } });
+
+      socket.on('chat_unread', () => setUnreadCount(prev => prev + 1));
+      socket.on('chat_read', () => {
+        // Silently re-fetch unread count for accuracy
+        fetch(`${API_BASE_URL}/api/chat/unread-counts`, { headers: { Authorization: `Bearer ${token}` } })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              const total = Object.values(data.counts).reduce((a, b) => a + b, 0);
+              setUnreadCount(total);
+            }
+          });
+      });
+
+      // Initial fetch
+      fetch(`${API_BASE_URL}/api/chat/unread-counts`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            const total = Object.values(data.counts).reduce((a, b) => a + b, 0);
+            setUnreadCount(total);
+          }
+        });
+
+      return () => socket.disconnect();
+    }
   }, [providerData]);
 
   const chartData = useMemo(() => {
@@ -194,8 +237,11 @@ export default function ProviderDashboard() {
       dates.push(label);
       counts.push(bookings.filter(b => b.bookingDate === iso).length);
     }
-    return { pending, accepted, rejected, dates, counts };
-  }, [bookings]);
+
+    const earnings = payments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
+    return { pending, accepted, rejected, dates, counts, earnings };
+  }, [bookings, payments]);
 
   const doughnutData = useMemo(() => ({
     labels: ['Pending', 'Confirmed', 'Rejected'],
@@ -313,24 +359,23 @@ export default function ProviderDashboard() {
         }`}
       >
         <div className="flex h-full min-h-0 flex-col">
-          <div className="flex items-center justify-between gap-2 border-b border-slate-800/80 px-4 py-4">
-            <button
-              type="button"
+          <div className="flex items-center justify-between gap-2 border-b border-white/5 px-6 py-6 bg-[#0f172a]/40">
+            <div
               onClick={() => navigate("/")}
-              className="flex min-w-0 flex-1 items-center gap-3 rounded-lg text-left outline-none ring-indigo-500/40 transition hover:bg-slate-800/50 focus-visible:ring-2"
+              className="flex items-center gap-0.5 cursor-pointer group"
             >
               <img
                 src="/images/logo3.png"
-                alt="LocalServe"
-                className="h-9 w-9 shrink-0 object-contain"
+                alt="LocalServe logo"
+                className="w-14 h-14 object-contain drop-shadow-[0_0_20px_rgba(6,182,212,0.3)] group-hover:drop-shadow-[0_0_28px_rgba(6,182,212,0.5)] group-hover:scale-105 transition-all duration-300"
               />
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold tracking-tight text-white">
+              <div className="flex flex-col -ml-1">
+                <span className="text-xl font-extrabold text-white tracking-tight leading-tight">
                   Local<span className="text-indigo-400">Serve</span>
-                </p>
-                <p className="text-xs text-slate-500">Expert panel</p>
+                </span>
+                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mt-0.5">Expert Panel</span>
               </div>
-            </button>
+            </div>
             <button
               type="button"
               className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-800 hover:text-white lg:hidden"
@@ -345,19 +390,27 @@ export default function ProviderDashboard() {
             {sidebarTabs.map((tab) => {
               const Icon = tab.icon;
               const active = activeTab === tab.id;
+              const badge = tab.id === 'messages' && unreadCount > 0 ? unreadCount : null;
               return (
                 <button
                   key={tab.id}
                   type="button"
                   onClick={() => selectTab(tab.id)}
-                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
+                  className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
                     active
                       ? "bg-slate-800 text-white shadow-sm"
                       : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-100"
                   }`}
                 >
-                  <Icon className="h-4 w-4 shrink-0 opacity-90" strokeWidth={1.75} />
-                  <span>{tab.label}</span>
+                  <span className="flex items-center gap-3">
+                    <Icon className="h-4 w-4 shrink-0 opacity-90" strokeWidth={1.75} />
+                    <span>{tab.label}</span>
+                  </span>
+                  {badge && (
+                    <span className="shrink-0 rounded-md bg-indigo-500 px-1.5 py-0.5 text-[10px] font-black text-white">
+                      {badge > 9 ? '9+' : badge}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -432,13 +485,31 @@ export default function ProviderDashboard() {
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+          <style>{`
+            @keyframes fadeInUp {
+              from { opacity: 0; transform: translateY(16px); }
+              to { opacity: 1; transform: translateY(0); }
+            }
+            .animate-fadeInUp {
+              animation: fadeInUp 0.5s ease-out forwards;
+              opacity: 0;
+            }
+            .stat-card-hover {
+              transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+            }
+            .stat-card-hover:hover {
+              transform: translateY(-2px);
+              background-color: rgba(30, 41, 59, 0.6);
+              border-color: rgba(99, 102, 241, 0.4);
+            }
+          `}</style>
           {activeTab === "dashboard" && (
-            <div className="mx-auto max-w-7xl space-y-5 sm:space-y-6">
+            <div className="mx-auto max-w-7xl space-y-5 sm:space-y-6 animate-fadeInUp">
               <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-                <StatCard label="Total Earnings" val="₹0" icon={<DollarSign size={18} strokeWidth={1.75} />} color="emerald" />
-                <StatCard label="Confirmed" val={chartData.accepted} icon={<CheckCircle2 size={18} strokeWidth={1.75} />} color="violet" />
-                <StatCard label="Profile Rating" val="5.0" icon={<Star size={18} strokeWidth={1.75} />} color="amber" />
-                <StatCard label="Pending" val={chartData.pending} icon={<Clock size={18} strokeWidth={1.75} />} color="rose" />
+                <StatCard label="Total Earnings" val={`₹${chartData.earnings.toLocaleString('en-IN')}`} icon={Wallet} tone="text-emerald-400" bg="bg-emerald-400/10" hint="Lifetime earnings" />
+                <StatCard label="Confirmed" val={chartData.accepted} icon={CheckCircle2} tone="text-violet-400" bg="bg-violet-400/10" hint="Active bookings" />
+                <StatCard label="Profile Rating" val="5.0" icon={Star} tone="text-amber-400" bg="bg-amber-400/10" hint="Customer feedback" />
+                <StatCard label="Pending" val={chartData.pending} icon={Clock} tone="text-rose-400" bg="bg-rose-400/10" hint="Needs action" />
               </div>
 
               <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-6">
@@ -565,13 +636,67 @@ export default function ProviderDashboard() {
             />
           )}
 
+          {activeTab === "messages" && <ProviderMessages />}
+
           {activeTab === "earnings" && (
-            <div className="flex min-h-[50vh] flex-col items-center justify-center px-4 py-12 sm:min-h-[60vh]">
-              <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-800 bg-slate-900">
-                <Wallet className="h-7 w-7 text-slate-500" strokeWidth={1.75} />
+            <div className="mx-auto max-w-5xl space-y-6 animate-fadeInUp">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                  <Wallet className="h-6 w-6 text-emerald-400" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-white tracking-tight">Earnings & Payments</h2>
+                  <p className="text-sm text-slate-400">Track your completed transactions</p>
+                </div>
               </div>
-              <h2 className="mb-2 text-lg font-semibold text-white sm:text-xl">Earnings</h2>
-              <p className="text-center text-sm text-slate-400">This section is coming soon.</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="rounded-2xl border border-slate-800/80 bg-slate-900/40 p-5">
+                  <p className="text-xs font-medium uppercase tracking-wider text-slate-500 mb-1">Lifetime Earnings</p>
+                  <p className="text-3xl font-bold text-emerald-400">₹{chartData.earnings.toLocaleString('en-IN')}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-800/80 bg-slate-900/40 p-5">
+                  <p className="text-xs font-medium uppercase tracking-wider text-slate-500 mb-1">Total Transactions</p>
+                  <p className="text-3xl font-bold text-white">{payments.length}</p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-800/80 bg-slate-900/40 overflow-hidden mt-8">
+                <div className="px-6 py-4 border-b border-white/5 bg-white/[0.02]">
+                  <h3 className="font-semibold text-white">Transaction History</h3>
+                </div>
+                {payments.length > 0 ? (
+                  <div className="divide-y divide-white/5">
+                    {payments.map(p => (
+                      <div key={p.id} className="p-4 sm:p-6 hover:bg-white/[0.02] transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                          <div className="h-10 w-10 shrink-0 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold">
+                            {p.customer?.name?.charAt(0) || 'C'}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-white">{p.customer?.name || 'Customer'}</p>
+                            <p className="text-xs text-slate-400">{p.booking?.serviceCategory} • TXN: {p.transactionId}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-6 sm:justify-end">
+                          <div className="text-right">
+                            <p className="text-sm font-bold text-emerald-400">₹{Number(p.amount).toLocaleString('en-IN')}</p>
+                            <p className="text-xs text-slate-500">{new Date(p.createdAt).toLocaleDateString()}</p>
+                          </div>
+                          <span className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider border ${p.paymentMethod === 'Online' ? 'bg-violet-500/10 text-violet-400 border-violet-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
+                            {p.paymentMethod}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-12 text-center">
+                    <Wallet className="h-10 w-10 text-slate-600 mx-auto mb-3" />
+                    <p className="text-sm font-medium text-slate-400">No earnings yet.</p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -584,24 +709,15 @@ export default function ProviderDashboard() {
 
 // --- HELPER COMPONENTS ---
 
-function StatCard({ label, val, icon, color }) {
-  const styles = {
-    violet: { border: "border-indigo-500/25", iconBg: "bg-indigo-500/10", iconText: "text-indigo-400" },
-    emerald: { border: "border-emerald-500/25", iconBg: "bg-emerald-500/10", iconText: "text-emerald-400" },
-    amber: { border: "border-amber-500/25", iconBg: "bg-amber-500/10", iconText: "text-amber-400" },
-    rose: { border: "border-rose-500/25", iconBg: "bg-rose-500/10", iconText: "text-rose-400" },
-  };
-  const s = styles[color];
-
+function StatCard({ label, val, icon: Icon, tone, bg, hint }) {
   return (
-    <div className={`flex items-center gap-3 rounded-xl border ${s.border} bg-slate-900/40 p-3 transition-colors hover:border-slate-600/80 sm:gap-4 sm:rounded-2xl sm:p-4`}>
-      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg sm:h-11 sm:w-11 sm:rounded-xl ${s.iconBg} ${s.iconText}`}>
-        {icon}
+    <div className={`stat-card-hover w-full rounded-xl border border-slate-800/80 bg-slate-900/40 p-4 text-left sm:rounded-2xl sm:p-5`}>
+      <div className={`mb-3 w-fit rounded-lg p-2.5 sm:mb-4 sm:rounded-xl sm:p-3 ${bg} ${tone}`}>
+        <Icon className="h-5 w-5" strokeWidth={1.75} />
       </div>
-      <div className="min-w-0">
-        <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">{label}</p>
-        <h3 className="mt-0.5 truncate text-base font-semibold tabular-nums text-white sm:text-lg">{val}</h3>
-      </div>
+      <h3 className="text-2xl font-semibold tabular-nums tracking-tight text-white sm:text-3xl">{val}</h3>
+      <p className="mt-1 text-sm font-medium text-slate-300">{label}</p>
+      <p className="mt-0.5 text-xs text-slate-500">{hint}</p>
     </div>
   );
 }

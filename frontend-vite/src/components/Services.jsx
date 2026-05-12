@@ -12,6 +12,7 @@ import {
   Star,
   Sparkles
 } from "lucide-react";
+import { API_BASE_URL } from "../config/api";
 
 const iconMap = {
   plumber: Wrench,
@@ -238,7 +239,7 @@ export default function Services() {
   const [dynamicServices, setDynamicServices] = useState([]);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:5000/api/user/services")
+    fetch(`${API_BASE_URL}/api/user/services`)
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {

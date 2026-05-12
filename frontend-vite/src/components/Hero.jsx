@@ -5,6 +5,7 @@ import {
   Search,
   Sparkles
 } from "lucide-react";
+import { API_BASE_URL } from "../config/api";
 
 export default function Hero() {
   const [services, setServices] = useState([]);
@@ -12,7 +13,7 @@ export default function Hero() {
   const [showDropdown, setShowDropdown] = useState(false);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:5000/api/user/services")
+    fetch(`${API_BASE_URL}/api/user/services`)
       .then(res => res.json())
       .then(data => {
         if(data.success) {

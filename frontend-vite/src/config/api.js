@@ -1,14 +1,7 @@
 // API Configuration:
 // - Desktop localhost: uses http://localhost:5000
 // - LAN access: uses current browser hostname with port 5000
-const currentHost =
-  typeof window !== "undefined" ? window.location.hostname : "localhost";
-const apiHost =
-  currentHost === "localhost" || currentHost === "127.0.0.1"
-    ? "localhost"
-    : currentHost;
-
-export const API_BASE_URL = `http://${apiHost}:5000`;
+export const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 // Helper function for API calls
 export const apiCall = async (endpoint, options = {}) => {

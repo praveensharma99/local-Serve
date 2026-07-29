@@ -3,7 +3,7 @@ const router = express.Router();
 const crypto = require('crypto');
 const razorpay = require('../utils/razorpay');
 const authMiddleware = require('../middleware/authMiddleware');
-const { Booking, ProviderProfile, Payment } = require('../models');
+const { Booking, ProviderProfile } = require('../models');
 
 // @route   POST /api/payments/create-order
 // @desc    Create Razorpay order for a booking
@@ -18,10 +18,6 @@ router.post('/create-order', authMiddleware, async (req, res) => {
 
     if (booking.userId !== req.user.id) {
       return res.status(403).json({ success: false, message: 'Unauthorized' });
-    }
-
-    if (booking.paymentStatus === 'Paid') {
-      return res.status(400).json({ success: false, message: 'Payment already completed' });
     }
 
     // Get provider price
@@ -70,26 +66,8 @@ router.post('/verify', authMiddleware, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }
 
-    if (booking.userId !== req.user.id) {
-      return res.status(403).json({ success: false, message: 'Unauthorized' });
-    }
-
-    booking.paymentMode = 'Online';
     booking.paymentStatus = 'Paid';
     await booking.save();
-
-    const provider = await ProviderProfile.findByPk(booking.providerId);
-    const amount = provider ? provider.pricePerHour : 0;
-
-    await Payment.create({
-      amount: amount,
-      paymentStatus: 'Completed',
-      transactionId: razorpay_payment_id,
-      paymentMethod: 'Online',
-      userId: req.user.id,
-      providerId: booking.providerId,
-      bookingId: booking.id
-    });
 
     res.json({ success: true, message: 'Payment verified successfully' });
   } catch (err) {
